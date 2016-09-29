@@ -13,6 +13,9 @@
   <ItemGroup>
     <ClCompile Include="src\cbPlatform.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\cbPlatform.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{06B788C8-EE4E-437F-9D23-0E0DB4D7C520}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
@@ -23,7 +26,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140_clang_c2</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
