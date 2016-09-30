@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cbPlatform", "cbPlatform\cbPlatform.vcxproj", "{06B788C8-EE4E-437F-9D23-0E0DB4D7C520}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cbGame", "J:\Programming\C++\cbGame\cbGame\cbGame.vcxproj", "{71927681-82D7-4164-BBB1-49A29E460DFC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cbGame", "cbGame\cbGame.vcxproj", "{71927681-82D7-4164-BBB1-49A29E460DFC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

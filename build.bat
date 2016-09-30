@@ -1,6 +1,6 @@
 @echo off
 
-ctime -begin cbLib.ctm
+REM ctime -begin cbLib.ctm
 set ClangCompilerFlags= -c -x c++ -mthread-model posix -fmath-errno -D _DEBUG -D _WINDOWS -D _UNICODE -D UNICODE -g2 -gdwarf-2 -O0 -Wall -Werror  -std=c++14 -fcxx-exceptions -Wno-unused-function -Wno-unused-variable
 set CommonCompilerFlags=-Od -MTd -nologo -fp:fast -fp:except- -Gm- -GR- -EHa- -Zo -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4505 -wd4127 -FC -Z7
 
@@ -26,13 +26,13 @@ REM clang %ClangCompilerFlags% %IncludeFolders% -o cbPlatform.obj ..\cbPlatform\
 REM link %CommonLinkerFlags% %CommonLinkerLibs% /ENTRY:WinMain /SUBSYSTEM:WINDOWS /OUT:cbPlatform.exe /PDB:cbPlatform_%random%.pdb cbPlatform.obj
 REM --------------                        END                       -----------------------
 
-cl %CommonCompilerFlags% %IncludeFolders% ..\cbGame\src\cbGame.cpp -LD /link %CommonLinkerFlags%  %CommonLinkerLibs% -PDB:handmade_%random%.pdb 
+cl %CommonCompilerFlags% %IncludeFolders% ..\cbGame\src\cbGame.cpp -LD /link %CommonLinkerFlags%  %CommonLinkerLibs% -PDB:cbGame_%random%.pdb 
 set LastError=%ERRORLEVEL%
 del lock.tmp
 cl %CommonCompilerFlags% %IncludeFolders% ..\cbPlatform\src\cbPlatform.cpp /link %CommonLinkerFlags% %CommonLinkerLibs%
 popd
 
-xcopy "ThirdParty\bin" "\bin" /S /Y /q
+xcopy "ThirdParty\bin" ".\bin" /S /Y /q
 
 
-ctime -end cbLib.ctm %LastError%
+REM ctime -end cbLib.ctm %LastError%
