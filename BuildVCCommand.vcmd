@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<SerializableSnippets xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <commands>
+    <Snippet>
+      <id>1</id>
+      <name>SaveAndRunBat</name>
+      <code>using EnvDTE;
+using EnvDTE80;
+
+public class C : VisualCommanderExt.ICommand
+{
+	private EnvDTE80.DTE2 DTE;
+
+	public void Run(EnvDTE80.DTE2 DTE, Microsoft.VisualStudio.Shell.Package package) 
+	{
+		this.DTE = DTE;
+
+		var ow = DTE.Windows.Item(EnvDTE.Constants.vsWindowKindOutput).Object as OutputWindow;
+		var buildWindow = ow.OutputWindowPanes.Item("Build");
+		buildWindow.Activate();
+		buildWindow.Clear();
+
+		DTE.ExecuteCommand("File.SaveAll");
+		//DTE.ExecuteCommand("Tools.ExternalCommand1");
+		System.Diagnostics.Process p = new System.Diagnostics.Process();
+		p.StartInfo.FileName = @"C:\Windows\System32\cmd.exe";
+		p.StartInfo.Arguments = "/k \"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall.bat\" amd64 &amp; build.bat";
+		p.StartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName(DTE.Solution.FullName);
+		p.StartInfo.UseShellExecute = false;
+		p.StartInfo.CreateNoWindow = true;
+		p.StartInfo.RedirectStandardOutput = true;
+		p.StartInfo.RedirectStandardError = true;
+		p.OutputDataReceived  += (sender, args) =&gt; OutputString(args.Data, buildWindow);
+		p.ErrorDataReceived  += (sender, args) =&gt; OutputString(args.Data, buildWindow);
+		p.Start();		
+        	p.BeginOutputReadLine();
+        	p.BeginErrorReadLine();
+		p.EnableRaisingEvents = true;
+		p.Exited += (sender, args) =&gt; {
+			p.Close();
+			OutputString("Build Done", buildWindow);
+		};
+	}
+
+	private void OutputString(string line, OutputWindowPane buildWindow)
+	{
+		buildWindow.OutputString(line + System.Environment.NewLine);
+	}
+}
+</code>
+      <referencedAssemblies />
+      <type>Command</type>
+      <lang>CS</lang>
+      <langVersion>v4.0</langVersion>
+      <enabled>true</enabled>
+      <includeDebugInformation>false</includeDebugInformation>
+    </Snippet>
+  </commands>
+  <extensions />
+  <commonCode />
+</SerializableSnippets>

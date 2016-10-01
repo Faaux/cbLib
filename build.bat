@@ -26,13 +26,17 @@ REM clang %ClangCompilerFlags% %IncludeFolders% -o cbPlatform.obj ..\cbPlatform\
 REM link %CommonLinkerFlags% %CommonLinkerLibs% /ENTRY:WinMain /SUBSYSTEM:WINDOWS /OUT:cbPlatform.exe /PDB:cbPlatform_%random%.pdb cbPlatform.obj
 REM --------------                        END                       -----------------------
 
+
 cl %CommonCompilerFlags% %IncludeFolders% ..\cbGame\src\cbGame.cpp -LD /link %CommonLinkerFlags%  %CommonLinkerLibs% -PDB:cbGame_%random%.pdb 
 set LastError=%ERRORLEVEL%
 del lock.tmp
+
+
 cl %CommonCompilerFlags% %IncludeFolders% ..\cbPlatform\src\cbPlatform.cpp /link %CommonLinkerFlags% %CommonLinkerLibs%
 popd
 
 xcopy "ThirdParty\bin" ".\bin" /S /Y /q
 
-
 REM ctime -end cbLib.ctm %LastError%
+
+exit
