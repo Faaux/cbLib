@@ -29,6 +29,8 @@ internal LARGE_INTEGER _lastCounter;
 internal uint64 _perfCountFrequency;
 internal float _deltaTime;
 internal float _currentFps;
+internal uint32 _windowWidth = 1280;
+internal uint32 _windowHeight = 720;
 internal bool _isCloseRequested;
 
 internal LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -162,7 +164,7 @@ internal void Win32InitWindowAndOpenGL()
         return;
     }
 
-    HWND hWindow = CreateWindowExA(0, wcex.lpszClassName, "cbDefaultWindow", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, 1280, 720, NULL,
+    HWND hWindow = CreateWindowExA(0, wcex.lpszClassName, "cbDefaultWindow", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, _windowWidth, _windowHeight, NULL,
                                    NULL, hInstance, NULL);
     if (!hWindow)
     {
@@ -207,6 +209,16 @@ internal float Win32UpdatePlatform()
 SWAP_BUFFER(Win32SwapBuffer)
 {
     SwapBuffers(DeviceContext);
+}
+
+GET_WIN_SIZE(GetWindowHeight)
+{
+	return _windowHeight;
+}
+
+GET_WIN_SIZE(GetWindowWidth)
+{
+	return _windowWidth;
 }
 
 internal FILETIME GetLastWriteTime(char *fileName)
@@ -293,6 +305,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     Win32PlatformCode platformCode;
     platformCode.SwapBuffer = &Win32SwapBuffer;
+    platformCode.GetWindowHeight = &GetWindowHeight;
+    platformCode.GetWindowWidth = &GetWindowWidth;
 
     while (!_isCloseRequested)
     {

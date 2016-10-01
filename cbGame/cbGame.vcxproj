@@ -102,7 +102,12 @@
     <ClInclude Include="include\cbInclude.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\cbFont.cpp" />
     <ClCompile Include="src\cbGame.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\font.f" />
+    <None Include="shaders\font.v" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
