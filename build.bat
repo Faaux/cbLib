@@ -36,6 +36,7 @@ cl %CommonCompilerFlags% %IncludeFolders% ..\cbPlatform\src\cbPlatform.cpp /link
 popd
 
 xcopy "ThirdParty\bin" ".\bin" /S /Y /q
+xcopy ".\res" ".\bin" /S /Y /q
 
 REM ctime -end cbLib.ctm %LastError%
 

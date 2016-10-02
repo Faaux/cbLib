@@ -1,16 +1,18 @@
+#include "cbFont.cpp"
 #include <GL/glew.h>
 #include <cbGame.h>
 #include <cbInclude.h>
-#include "cbFont.cpp"
 
-internal void Render(Win32PlatformCode platformCode)
+Win32PlatformCode PlatformCode;
+
+internal void Render()
 {
     glClearColor(0.2f, 0.4f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	DrawString("test");
+    DrawString("Das ist ein komischer griechischer text :){}", 0.75f, 150,150);
 
-    platformCode.SwapBuffer();
+    PlatformCode.SwapBuffer();
 }
 
 internal void Update()
@@ -20,5 +22,10 @@ internal void Update()
 EXPORT GAME_LOOP(GameLoop)
 {
     Update();
-    Render(platformCode);
+    Render();
+}
+
+EXPORT GAME_INIT(GameInit)
+{
+    PlatformCode = platformCode;
 }

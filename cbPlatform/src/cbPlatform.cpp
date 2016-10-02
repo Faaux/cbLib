@@ -9,6 +9,9 @@
 #include <cbInclude.h>
 #include <cbPlatform.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb/stb_image.h>
+
 #ifdef UNICODE
 typedef LPWSTR LPTSTR;
 #else
@@ -21,14 +24,16 @@ struct Win32GameCode
     FILETIME LastWriteTime;
 
     game_loop *GameLoop;
+    game_init *GameInit;
     bool IsValid;
 };
-
-internal HDC DeviceContext;
+internal HWND _hWindow;
+internal HDC _deviceContext;
 internal LARGE_INTEGER _lastCounter;
 internal uint64 _perfCountFrequency;
 internal float _deltaTime;
 internal float _currentFps;
+internal bool _windowWasResized = false;
 internal uint32 _windowWidth = 1280;
 internal uint32 _windowHeight = 720;
 internal bool _isCloseRequested;
@@ -39,6 +44,11 @@ internal LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
 
     switch (message)
     {
+    case WM_SIZE:
+        _windowWidth = LOWORD(lParam);
+        _windowHeight = HIWORD(lParam);
+        _windowWasResized = true;
+        break;
     case WM_DESTROY:
     case WM_QUIT:
         _isCloseRequested = true;
@@ -62,13 +72,13 @@ internal void Win32InitOpenGL()
     DesiredFormat.iLayerType = PFD_MAIN_PLANE;
     DesiredFormat.iPixelType = PFD_TYPE_RGBA;
 
-    int suggestedFormatIndex = ChoosePixelFormat(DeviceContext, &DesiredFormat);
+    int suggestedFormatIndex = ChoosePixelFormat(_deviceContext, &DesiredFormat);
     PIXELFORMATDESCRIPTOR suggestedFormat;
-    DescribePixelFormat(DeviceContext, suggestedFormatIndex, sizeof(suggestedFormat), &suggestedFormat);
-    SetPixelFormat(DeviceContext, suggestedFormatIndex, &suggestedFormat);
+    DescribePixelFormat(_deviceContext, suggestedFormatIndex, sizeof(suggestedFormat), &suggestedFormat);
+    SetPixelFormat(_deviceContext, suggestedFormatIndex, &suggestedFormat);
 
-    HGLRC tempContext = wglCreateContext(DeviceContext);
-    if (wglMakeCurrent(DeviceContext, tempContext))
+    HGLRC tempContext = wglCreateContext(_deviceContext);
+    if (wglMakeCurrent(_deviceContext, tempContext))
     {
         glewExperimental = TRUE;
         GLenum err = glewInit();
@@ -101,19 +111,19 @@ internal void Win32InitOpenGL()
         // Find proper Pixel Format
         int pixelFormat;
         uint32 numFormat;
-        wglChoosePixelFormatARB(DeviceContext, pixel_attribs, nullptr, 1, &pixelFormat, &numFormat);
+        wglChoosePixelFormatARB(_deviceContext, pixel_attribs, nullptr, 1, &pixelFormat, &numFormat);
         suggestedFormat = {};
-        DescribePixelFormat(DeviceContext, pixelFormat, sizeof(suggestedFormat), &suggestedFormat);
-        SetPixelFormat(DeviceContext, pixelFormat, &suggestedFormat);
+        DescribePixelFormat(_deviceContext, pixelFormat, sizeof(suggestedFormat), &suggestedFormat);
+        SetPixelFormat(_deviceContext, pixelFormat, &suggestedFormat);
 
         if (wglewIsSupported("WGL_ARB_create_context") == 1)
         {
             GLint attribs[] = {WGL_CONTEXT_MAJOR_VERSION_ARB, 3, WGL_CONTEXT_MINOR_VERSION_ARB, 3, 0};
 
-            HGLRC context = wglCreateContextAttribsARB(DeviceContext, 0, attribs);
+            HGLRC context = wglCreateContextAttribsARB(_deviceContext, 0, attribs);
             wglMakeCurrent(NULL, NULL);
             wglDeleteContext(tempContext);
-            wglMakeCurrent(DeviceContext, context);
+            wglMakeCurrent(_deviceContext, context);
         }
 
         if (wglewIsSupported("WGL_EXT_swap_control") == 1)
@@ -164,20 +174,20 @@ internal void Win32InitWindowAndOpenGL()
         return;
     }
 
-    HWND hWindow = CreateWindowExA(0, wcex.lpszClassName, "cbDefaultWindow", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, _windowWidth, _windowHeight, NULL,
-                                   NULL, hInstance, NULL);
-    if (!hWindow)
+    _hWindow = CreateWindowExA(0, wcex.lpszClassName, "cbDefaultWindow", WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT, _windowWidth,
+                               _windowHeight, NULL, NULL, hInstance, NULL);
+    if (!_hWindow)
     {
         return;
     }
 
-    DeviceContext = GetDC(hWindow);
+    _deviceContext = GetDC(_hWindow);
 
     Win32InitOpenGL();
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-    ShowWindow(hWindow, SW_SHOWDEFAULT);
-    UpdateWindow(hWindow);
+    ShowWindow(_hWindow, SW_SHOWDEFAULT);
+    UpdateWindow(_hWindow);
 }
 
 internal float Win32UpdatePlatform()
@@ -194,6 +204,12 @@ internal float Win32UpdatePlatform()
         DispatchMessageA(&Message);
     }
 
+    if (_windowWasResized)
+    {
+        glViewport(0, 0, _windowWidth, _windowHeight);
+        _windowWasResized = false;
+    }
+
     LARGE_INTEGER endCounter;
     QueryPerformanceCounter(&endCounter);
 
@@ -208,17 +224,61 @@ internal float Win32UpdatePlatform()
 
 SWAP_BUFFER(Win32SwapBuffer)
 {
-    SwapBuffers(DeviceContext);
+    SwapBuffers(_deviceContext);
+}
+
+READ_FILE(Win32ReadFile)
+{
+    FILE *f;
+    errno_t err = fopen_s(&f, path, "r");
+    if (err != 0)
+    {
+        return nullptr;
+    }
+    // Go to end
+    fseek(f, 0, SEEK_END);
+
+    // Read file size
+    size = ftell(f);
+
+    // Readwind to start
+    rewind(f);
+
+    // Read memory
+    void *memory = malloc(size);
+    fread(memory, size, 1, f);
+
+    // close stream
+    fclose(f);
+
+    return memory;
+}
+
+FREE_FILE(Win32FreeFile)
+{
+	free(memory);
+}
+
+LOAD_IMAGE(Win32LoadImage)
+{
+    int n;
+    unsigned char *data = stbi_load(path, &width, &height, &n, 4);
+    return data;
+}
+
+FREE_IMAGE(Win32FreeImage)
+{
+    stbi_image_free(image);
 }
 
 GET_WIN_SIZE(GetWindowHeight)
 {
-	return _windowHeight;
+    return _windowHeight;
 }
 
 GET_WIN_SIZE(GetWindowWidth)
 {
-	return _windowWidth;
+    return _windowWidth;
 }
 
 internal FILETIME GetLastWriteTime(char *fileName)
@@ -252,9 +312,11 @@ internal Win32GameCode Win32LoadGameCode()
     if (result.GameCodeDLL)
     {
         game_loop *loop = (game_loop *)GetProcAddress(result.GameCodeDLL, "GameLoop");
-        if (loop)
+        game_init *init = (game_init *)GetProcAddress(result.GameCodeDLL, "GameInit");
+        if (loop && init)
         {
             result.GameLoop = loop;
+            result.GameInit = init;
             result.IsValid = true;
         }
         else
@@ -270,7 +332,19 @@ internal Win32GameCode Win32LoadGameCode()
     if (!result.IsValid)
     {
         result.GameLoop = GameLoopStub;
+        result.GameInit = GameInitStub;
     }
+
+    Win32PlatformCode platformCode;
+    platformCode.SwapBuffer = &Win32SwapBuffer;
+    platformCode.cbReadFile = &Win32ReadFile;
+    platformCode.cbFreeFile = &Win32FreeFile;
+    platformCode.cbFreeImage = &Win32FreeImage;
+    platformCode.cbLoadImage = &Win32LoadImage;
+    platformCode.GetWindowHeight = &GetWindowHeight;
+    platformCode.GetWindowWidth = &GetWindowWidth;
+
+    result.GameInit(platformCode);
 
     return result;
 }
@@ -303,11 +377,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     Win32GameCode gameCode = Win32LoadGameCode();
 
-    Win32PlatformCode platformCode;
-    platformCode.SwapBuffer = &Win32SwapBuffer;
-    platformCode.GetWindowHeight = &GetWindowHeight;
-    platformCode.GetWindowWidth = &GetWindowWidth;
-
     while (!_isCloseRequested)
     {
         FILETIME lastWriteTime = GetLastWriteTime("cbGame.dll");
@@ -328,7 +397,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // Let Game make logic and render and stuff
         // this will also do the timing
-        gameCode.GameLoop(deltaTime, platformCode);
+        gameCode.GameLoop(deltaTime);
     }
     return 0;
 }
