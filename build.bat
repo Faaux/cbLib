@@ -2,7 +2,7 @@
 
 REM ctime -begin cbLib.ctm
 set ClangCompilerFlags= -c -x c++ -mthread-model posix -fmath-errno -D _DEBUG -D _WINDOWS -D _UNICODE -D UNICODE -g2 -gdwarf-2 -O0 -Wall -Werror  -std=c++14 -fcxx-exceptions -Wno-unused-function -Wno-unused-variable
-set CommonCompilerFlags=-Od -MTd -nologo -fp:fast -fp:except- -Gm- -GR- -EHa- -Zo -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4505 -wd4127 -FC -Z7
+set CommonCompilerFlags=-Od -MTd -nologo -fp:fast -fp:except- -Gm- -GR- -EHa- -Zo -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4505 -wd4127 -FC -Z7 /EHsc
 
 set IncludeFolders= -I..\ThirdParty\include\ -I..\cbGame\include\ -I..\cbPlatform\include\
 
