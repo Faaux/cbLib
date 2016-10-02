@@ -2,6 +2,25 @@
 #include <GLM.h>
 #include <cbGame.h>
 #include <cbInclude.h>
+#include <cstdio>
+
+struct SDFFontData
+{
+	int LineBase;
+	int LineHeight;
+	int Width, Height;
+	int Padding[4];
+};
+
+struct SDFGlyphData
+{
+	float TexX, TexY;
+	float TexWidth, TexHeight;
+	int Width, Height;
+	int XOffset, YOffset;
+	int XAdvance;
+	bool IsValid;
+};
 
 struct FontData
 {
@@ -14,6 +33,10 @@ struct GlyphData
 {
     char charWidth;
 };
+
+static int _desiredPadding = 8;
+static SDFFontData sdfFontData;
+static SDFGlyphData sdfGlyphData[256];
 
 static FontData fontData;
 static GlyphData glyphData[256];
@@ -39,10 +62,12 @@ static const char *basicFontFragmentShader = "#version 330 core\n"
                                              "out vec4 color;\n"
                                              "uniform sampler2D text;\n"
                                              "uniform vec3 textColor;\n"
+                                             "const float smoothing = 1.0/16.0;\n"
                                              "void main()\n"
                                              "{\n"
-                                             "	vec4 sampled = vec4(1.0, 1.0, 1.0, texture(text, TexCoords).r);\n"
-                                             "	color = vec4(textColor, 1.0) * sampled;\n"
+                                             "	float distance = texture2D(text, TexCoords).a;\n"
+                                             "	float alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, distance);\n"
+                                             "	color = vec4(textColor, alpha);\n"
                                              "};\n";
 
 internal void InitVaoVbo()
@@ -109,136 +134,316 @@ internal void InitShader()
     glDeleteShader(fragmentShaderId);
 }
 
-internal void InitTexture()
+internal void InitMetaData()
 {
-    long size;
+	long size;
 	void* memory = PlatformCode.cbReadFile("Calibri.dat", size);
 	int *file = (int *)memory;
-    fontData.width = *file++;
-    fontData.height = *file++;
-    fontData.cellWidth = *file++;
-    fontData.cellHeight = *file++;
+	fontData.width = *file++;
+	fontData.height = *file++;
+	fontData.cellWidth = *file++;
+	fontData.cellHeight = *file++;
 
-    char *fileChar = (char *)file;
-    fontData.firstCharacter = *fileChar++;
+	char *fileChar = (char *)file;
+	fontData.firstCharacter = *fileChar++;
 
-    for (int i = 0; i < 256; ++i)
-    {
-        glyphData[i].charWidth = *fileChar++;
-    }
+	for (int i = 0; i < 256; ++i)
+	{
+		glyphData[i].charWidth = *fileChar++;
+	}
 
 	PlatformCode.cbFreeFile(memory);
+}
 
+internal void InitTexture(char *fileName)
+{
     int width, height;
-    unsigned char *atlas = PlatformCode.cbLoadImage("Calibri.png", width, height);
+    unsigned char *atlas = PlatformCode.cbLoadImage(fileName, width, height);
 
     glGenTextures(1, &texId);
     glBindTexture(GL_TEXTURE_2D, texId);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas);
     // can free temp_bitmap at this point
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
 
     PlatformCode.cbFreeImage(atlas);
 }
 
-internal void InitFont()
+internal void LoadSDFMetaData()
 {
-    InitVaoVbo();
-    InitShader();
-    InitTexture();
+	FILE *fid;
+	errno_t err = fopen_s(&fid, "Segoe.fnt", "r");
+	if (err != 0)
+	{
+		return;
+	}
+	char line[256];
+	while (!feof(fid))
+	{		
+		fgets(line, sizeof(line), fid);
+		int index,x,y,width,height,xoffset,yoffset,xadvance;
+		if (sscanf_s(line, "info face=\"Segoe UI Bold\" size=59 bold=0 italic=0 charset=\"\" unicode=0 stretchH=100 smooth=1 aa=1 padding=%i,%i,%i,%i spacing=0,0", &sdfFontData.Padding[0], &sdfFontData.Padding[1], &sdfFontData.Padding[2], &sdfFontData.Padding[3]))
+		{
+
+		}
+		else if (sscanf_s(line, "common lineHeight=%i base=%i scaleW=%i scaleH=%i", &sdfFontData.LineHeight, &sdfFontData.LineBase, &sdfFontData.Width, &sdfFontData.Height))
+		{			
+			
+		}
+		else if (sscanf_s(line, "char id=%i x=%i y=%i width=%i height=%i xoffset=%i yoffset=%i xadvance=%i", &index,&x,&y,&width,&height,&xoffset,&yoffset,&xadvance))
+		{
+			int padWidth = (sdfFontData.Padding[1] + sdfFontData.Padding[3]);
+			int padHeight = (sdfFontData.Padding[0] + sdfFontData.Padding[2]);
+			sdfGlyphData[index].TexX = (x + (sdfFontData.Padding[1] - _desiredPadding)) / (float)sdfFontData.Width;
+			sdfGlyphData[index].TexY = (y + (sdfFontData.Padding[0] - _desiredPadding)) / (float)sdfFontData.Height;
+			sdfGlyphData[index].TexWidth = width / (float)sdfFontData.Width;
+			sdfGlyphData[index].TexHeight = height / (float)sdfFontData.Height;
+			sdfGlyphData[index].Width = width - (padWidth - (2 * _desiredPadding));
+			sdfGlyphData[index].Height = height - (padHeight - (2 * _desiredPadding));
+			sdfGlyphData[index].XOffset = xoffset + (sdfFontData.Padding[1] - _desiredPadding);
+			sdfGlyphData[index].YOffset = yoffset + (sdfFontData.Padding[0] - _desiredPadding);
+			sdfGlyphData[index].XAdvance = xadvance - padWidth;
+			sdfGlyphData[index].IsValid = true;
+		}
+	}
+
+	fclose(fid);
 }
 
-internal void DrawString(char *text, float size, int x, int y)
+internal void InitFont()
 {
-    static bool wasInit = false;
-    if (!wasInit)
-    {
-        wasInit = true;
-        InitFont();
-    }
+	static bool wasInit = false;
+	if(!wasInit)
+	{
+		wasInit = true;
+		InitVaoVbo();
+		InitShader();
+	}
+}
 
-    float winWidth = (float)PlatformCode.GetWindowWidth();
-    float winHeight = (float)PlatformCode.GetWindowHeight();
+internal void InitCasual()
+{
+	InitMetaData();
+	InitTexture("Calibri.png");
+	InitFont();
+}
 
-    glm::mat4 projection = glm::ortho(0.0f, winWidth, 0.0f, winHeight);
+internal void InitSDF()
+{
+	LoadSDFMetaData();
+	InitTexture("Segoe.png");
+	InitFont();
+}
 
-    GLuint projLoc = glGetUniformLocation(fontShaderId, "projection");
-    glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
+internal void DrawStringCasual(char *text, float size, int x, int y)
+{
+	static bool wasInit = false;
+	if (!wasInit)
+	{
+		wasInit = true;
+		InitCasual();
+	}
 
-    GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
-    glUniform3f(colorLoc, 0.f, 0.f, 0.f);
+	float winWidth = (float)PlatformCode.GetWindowWidth();
+	float winHeight = (float)PlatformCode.GetWindowHeight();
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texId);
+	glm::mat4 projection = glm::ortho(0.0f, winWidth, 0.0f, winHeight);
+
+	GLuint projLoc = glGetUniformLocation(fontShaderId, "projection");
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
+
+	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
+	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texId);
 
 
 	glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glUseProgram(fontShaderId);
+	glUseProgram(fontShaderId);
 
-    float posX = (float)x;
-    float posY = winHeight - y - (fontData.cellHeight * size);
+	float posX = (float)x;
+	float posY = winHeight - y - (fontData.cellHeight * size);
 
-    while (*text)
-    {
-        char toPrint = *text;
-        if (toPrint >= fontData.firstCharacter && toPrint <= 255)
-        {
+	while (*text)
+	{
+		char toPrint = *text;
+		if (toPrint >= fontData.firstCharacter && toPrint <= 255)
+		{
 
-            int row = (toPrint - fontData.firstCharacter) / (fontData.width / fontData.cellWidth);
-            int col = (toPrint - fontData.firstCharacter) % (fontData.height / fontData.cellHeight);
+			int row = (toPrint - fontData.firstCharacter) / (fontData.width / fontData.cellWidth);
+			int col = (toPrint - fontData.firstCharacter) % (fontData.height / fontData.cellHeight);
 
-            float left = (float)col * fontData.cellWidth;
-            float top = (float)row * fontData.cellHeight;
+			float left = (float)col * fontData.cellWidth;
+			float top = (float)row * fontData.cellHeight;
 
 			float heightFactor = fontData.cellHeight * size;
 			float widthFactor = fontData.cellWidth * size;
 
-            float vertices[] = {posX,
-                                posY + heightFactor,
-                                left / fontData.width,
-                                top / fontData.height,
+			float vertices[] = { posX,
+				posY + heightFactor,
+				left / fontData.width,
+				top / fontData.height,
 
-                                posX,
-                                posY,
-                                left / fontData.width,
-                                (top + fontData.cellHeight) / fontData.height,
+				posX,
+				posY,
+				left / fontData.width,
+				(top + fontData.cellHeight) / fontData.height,
 
-                                posX + widthFactor,
-                                posY,
-                                (left + fontData.cellWidth) / fontData.width,
-                                (top + fontData.cellHeight) / fontData.height,
+				posX + widthFactor,
+				posY,
+				(left + fontData.cellWidth) / fontData.width,
+				(top + fontData.cellHeight) / fontData.height,
 
-                                posX,
-                                posY + heightFactor,
-                                left / fontData.width,
-                                top / fontData.height,
+				posX,
+				posY + heightFactor,
+				left / fontData.width,
+				top / fontData.height,
 
-                                posX + widthFactor,
-                                posY,
-                                (left + fontData.cellWidth) / fontData.width,
-                                (top + fontData.cellHeight) / fontData.height,
+				posX + widthFactor,
+				posY,
+				(left + fontData.cellWidth) / fontData.width,
+				(top + fontData.cellHeight) / fontData.height,
 
-                                posX + widthFactor,
-                                posY + heightFactor,
-                                (left + fontData.cellWidth) / fontData.width,
-                                top / fontData.height };
+				posX + widthFactor,
+				posY + heightFactor,
+				(left + fontData.cellWidth) / fontData.width,
+				top / fontData.height };
 
-            posX += glyphData[toPrint].charWidth * size;
-            glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-            glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
+			posX += glyphData[toPrint].charWidth * size;
+			glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-            glBindVertexArray(quadVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-            glBindVertexArray(0);
-        }
+			glBindVertexArray(quadVAO);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+			glBindVertexArray(0);
+		}
 
-        ++text;
-    }
+		++text;
+	}
 
 	glEnable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
+	glDisable(GL_BLEND);
 }
+
+internal void DrawStringSDF(char *text, float scale, int x, int y)
+{
+	static bool wasInit = false;
+	if (!wasInit)
+	{
+		wasInit = true;
+		InitSDF();
+	}
+
+	float winWidth = (float)PlatformCode.GetWindowWidth();
+	float winHeight = (float)PlatformCode.GetWindowHeight();
+
+	glm::mat4 projection = glm::ortho(0.0f, winWidth, 0.0f, winHeight);
+
+	GLuint projLoc = glGetUniformLocation(fontShaderId, "projection");
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
+
+	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
+	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texId);
+
+
+	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glUseProgram(fontShaderId);
+
+	float posX = (float)x;
+	float posY = winHeight - y;
+
+	while (*text)
+	{
+		char toPrint = *text;
+		if (toPrint >= 0 && toPrint <= 255)
+		{
+			if(!sdfGlyphData[toPrint].IsValid)
+				continue;
+
+			int glyphHeight = sdfGlyphData[toPrint].Height;
+			int glyphWidth = sdfGlyphData[toPrint].Width;
+			float glyphHeightScaled = sdfGlyphData[toPrint].Height * scale;
+			float glyphWidthScaled = sdfGlyphData[toPrint].Width * scale;
+
+			float texLeft = (float)sdfGlyphData[toPrint].TexX;
+			float texTop = (float)sdfGlyphData[toPrint].TexY;
+			float texWidth = sdfGlyphData[toPrint].TexWidth;
+			float texHeight = sdfGlyphData[toPrint].TexHeight;
+
+			float internalPosX = posX + (sdfGlyphData[toPrint].XOffset * scale);
+			float internalPosY = posY - (sdfGlyphData[toPrint].YOffset * scale);
+
+
+			float vertices[] = { 
+				// Top Left
+				internalPosX,
+				internalPosY,
+				texLeft,
+				texTop,
+
+				// Bottom Left
+				internalPosX,
+				internalPosY - glyphHeightScaled,
+				texLeft,
+				texTop + texHeight,
+
+				// Bottom Right
+				internalPosX + glyphWidthScaled,
+				internalPosY - glyphHeightScaled,
+				(texLeft + texWidth), 
+				(texTop + texHeight),
+
+				// Top Left
+				internalPosX,
+				internalPosY,
+				texLeft,
+				texTop,
+
+				// Bottom Right
+				internalPosX + glyphWidthScaled,
+				internalPosY - glyphHeightScaled,
+				(texLeft + texWidth),
+				(texTop + texHeight),
+
+				// Top Right
+				internalPosX + glyphWidthScaled,
+				internalPosY,
+				(texLeft + texWidth),
+				texTop
+			};
+
+			posX += sdfGlyphData[toPrint].XAdvance * scale;
+			glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+			glBindVertexArray(quadVAO);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+			glBindVertexArray(0);
+		}
+
+		++text;
+	}
+
+	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_BLEND);
+}
+
+internal void DrawString(char *text, float size, int x, int y)
+{
+	DrawStringSDF(text, size, x, y);
+}
+

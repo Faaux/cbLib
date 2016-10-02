@@ -128,7 +128,7 @@ internal void Win32InitOpenGL()
 
         if (wglewIsSupported("WGL_EXT_swap_control") == 1)
         {
-            wglSwapIntervalEXT(0);
+            wglSwapIntervalEXT(1);
         }
         // Enable depth test
         glEnable(GL_DEPTH_TEST);
@@ -230,7 +230,7 @@ SWAP_BUFFER(Win32SwapBuffer)
 READ_FILE(Win32ReadFile)
 {
     FILE *f;
-    errno_t err = fopen_s(&f, path, "r");
+    errno_t err = fopen_s(&f, path, "rb");
     if (err != 0)
     {
         return nullptr;
@@ -250,7 +250,6 @@ READ_FILE(Win32ReadFile)
 
     // close stream
     fclose(f);
-
     return memory;
 }
 

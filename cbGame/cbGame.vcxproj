@@ -98,6 +98,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\cbBasic.h" />
     <ClInclude Include="include\cbGame.h" />
     <ClInclude Include="include\cbInclude.h" />
     <ClInclude Include="include\GLM.h" />
