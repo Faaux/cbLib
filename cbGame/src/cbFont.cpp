@@ -62,11 +62,12 @@ static const char *basicFontFragmentShader = "#version 330 core\n"
                                              "out vec4 color;\n"
                                              "uniform sampler2D text;\n"
                                              "uniform vec3 textColor;\n"
-                                             "const float smoothing = 1.0/16.0;\n"
+											 "uniform float smoothed;\n"
+                                             "const float solid = 0.5;\n"
                                              "void main()\n"
                                              "{\n"
                                              "	float distance = texture2D(text, TexCoords).a;\n"
-                                             "	float alpha = smoothstep(0.5 - smoothing, 0.5 + smoothing, distance);\n"
+                                             "	float alpha = smoothstep(solid, solid + smoothed, distance);\n"
                                              "	color = vec4(textColor, alpha);\n"
                                              "};\n";
 
@@ -351,6 +352,18 @@ internal void DrawStringSDF(char *text, float scale, int x, int y)
 
 	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
 	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
+
+	float smoothed;
+	if(scale < 1)
+	{
+		smoothed = 0.1;
+	}
+	else
+	{
+		smoothed = 0.05;
+	}
+	GLuint smoothedLoc = glGetUniformLocation(fontShaderId, "smoothed");
+	glUniform1f(smoothedLoc, smoothed);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texId);

@@ -16,7 +16,11 @@ internal void Render(float deltaTime)
 	char text[] = "Last MSg: ";
 
 	char* concat = cbConcatStr(text, ArrayCount(text), num, ArrayCount(num));
-    DrawString(concat, .5f, 10, 10);
+
+	static float size = 0;
+	size += deltaTime;
+	size = fmod(size, 2.f);
+    DrawString(concat, size / 4.f, 10, 10);
 
 	free(concat);
     PlatformCode.SwapBuffer();
