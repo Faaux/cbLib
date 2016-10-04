@@ -128,7 +128,7 @@ internal void Win32InitOpenGL()
 
         if (wglewIsSupported("WGL_EXT_swap_control") == 1)
         {
-            wglSwapIntervalEXT(1);
+            wglSwapIntervalEXT(0);
         }
         // Enable depth test
         glEnable(GL_DEPTH_TEST);

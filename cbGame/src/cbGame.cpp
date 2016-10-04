@@ -17,10 +17,10 @@ internal void Render(float deltaTime)
 
 	char* concat = cbConcatStr(text, ArrayCount(text), num, ArrayCount(num));
 
-	static float size = 0;
-	size += deltaTime;
-	size = fmod(size, 2.f);
-    DrawString(concat, size / 4.f, 10, 10);
+	//static float size = 0;
+	//size += deltaTime;
+	//size = fmod(size, 2.f);
+    DrawString(concat, 64.f, 0, 0);
 
 	free(concat);
     PlatformCode.SwapBuffer();

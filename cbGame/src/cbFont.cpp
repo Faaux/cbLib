@@ -22,24 +22,10 @@ struct SDFGlyphData
 	bool IsValid;
 };
 
-struct FontData
-{
-    int width, height;
-    int cellWidth, cellHeight;
-    char firstCharacter;
-};
-
-struct GlyphData
-{
-    char charWidth;
-};
-
 static int _desiredPadding = 8;
 static SDFFontData sdfFontData;
 static SDFGlyphData sdfGlyphData[256];
 
-static FontData fontData;
-static GlyphData glyphData[256];
 static GLuint texId;
 static GLuint quadVAO;
 static GLuint quadVBO;
@@ -135,27 +121,6 @@ internal void InitShader()
     glDeleteShader(fragmentShaderId);
 }
 
-internal void InitMetaData()
-{
-	long size;
-	void* memory = PlatformCode.cbReadFile("Calibri.dat", size);
-	int *file = (int *)memory;
-	fontData.width = *file++;
-	fontData.height = *file++;
-	fontData.cellWidth = *file++;
-	fontData.cellHeight = *file++;
-
-	char *fileChar = (char *)file;
-	fontData.firstCharacter = *fileChar++;
-
-	for (int i = 0; i < 256; ++i)
-	{
-		glyphData[i].charWidth = *fileChar++;
-	}
-
-	PlatformCode.cbFreeFile(memory);
-}
-
 internal void InitTexture(char *fileName)
 {
     int width, height;
@@ -224,13 +189,6 @@ internal void InitFont()
 	}
 }
 
-internal void InitCasual()
-{
-	InitMetaData();
-	InitTexture("Calibri.png");
-	InitFont();
-}
-
 internal void InitSDF()
 {
 	LoadSDFMetaData();
@@ -238,102 +196,7 @@ internal void InitSDF()
 	InitFont();
 }
 
-internal void DrawStringCasual(char *text, float size, int x, int y)
-{
-	static bool wasInit = false;
-	if (!wasInit)
-	{
-		wasInit = true;
-		InitCasual();
-	}
-
-	float winWidth = (float)PlatformCode.GetWindowWidth();
-	float winHeight = (float)PlatformCode.GetWindowHeight();
-
-	glm::mat4 projection = glm::ortho(0.0f, winWidth, 0.0f, winHeight);
-
-	GLuint projLoc = glGetUniformLocation(fontShaderId, "projection");
-	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
-
-	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
-	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texId);
-
-
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glUseProgram(fontShaderId);
-
-	float posX = (float)x;
-	float posY = winHeight - y - (fontData.cellHeight * size);
-
-	while (*text)
-	{
-		char toPrint = *text;
-		if (toPrint >= fontData.firstCharacter && toPrint <= 255)
-		{
-
-			int row = (toPrint - fontData.firstCharacter) / (fontData.width / fontData.cellWidth);
-			int col = (toPrint - fontData.firstCharacter) % (fontData.height / fontData.cellHeight);
-
-			float left = (float)col * fontData.cellWidth;
-			float top = (float)row * fontData.cellHeight;
-
-			float heightFactor = fontData.cellHeight * size;
-			float widthFactor = fontData.cellWidth * size;
-
-			float vertices[] = { posX,
-				posY + heightFactor,
-				left / fontData.width,
-				top / fontData.height,
-
-				posX,
-				posY,
-				left / fontData.width,
-				(top + fontData.cellHeight) / fontData.height,
-
-				posX + widthFactor,
-				posY,
-				(left + fontData.cellWidth) / fontData.width,
-				(top + fontData.cellHeight) / fontData.height,
-
-				posX,
-				posY + heightFactor,
-				left / fontData.width,
-				top / fontData.height,
-
-				posX + widthFactor,
-				posY,
-				(left + fontData.cellWidth) / fontData.width,
-				(top + fontData.cellHeight) / fontData.height,
-
-				posX + widthFactor,
-				posY + heightFactor,
-				(left + fontData.cellWidth) / fontData.width,
-				top / fontData.height };
-
-			posX += glyphData[toPrint].charWidth * size;
-			glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-			glBindVertexArray(quadVAO);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			glBindVertexArray(0);
-		}
-
-		++text;
-	}
-
-	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_BLEND);
-}
-
-internal void DrawStringSDF(char *text, float scale, int x, int y)
+internal void DrawString(char *text, float sizeInPx, int x, int y)
 {
 	static bool wasInit = false;
 	if (!wasInit)
@@ -353,6 +216,7 @@ internal void DrawStringSDF(char *text, float scale, int x, int y)
 	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
 	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
 
+	float scale = sizeInPx / sdfFontData.LineHeight;
 	float smoothed;
 	if(scale < 1)
 	{
@@ -454,9 +318,3 @@ internal void DrawStringSDF(char *text, float scale, int x, int y)
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 }
-
-internal void DrawString(char *text, float size, int x, int y)
-{
-	DrawStringSDF(text, size, x, y);
-}
-
