@@ -104,7 +104,6 @@
     <ClInclude Include="include\GLM.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\cbFont.cpp" />
     <ClCompile Include="src\cbGame.cpp" />
   </ItemGroup>
   <ItemGroup>

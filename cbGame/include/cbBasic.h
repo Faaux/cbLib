@@ -2,12 +2,12 @@
 #include <cstdio>
 #include <cbMemory.h>
 
-inline char* cbItoA(int i, char b[], size_t size) {
+inline char* cbItoA(int i, char b[], mem_size size) {
 	int count = sprintf_s(b, size,"%d", i);
 	return b + count;
 }
 
-inline char* cbFtoA(float i, char b[], size_t size) {
+inline char* cbFtoA(float i, char b[], mem_size size) {
 	int count = sprintf_s(b, size, "%f", i);
 
 	char * end = b + count;
@@ -15,16 +15,16 @@ inline char* cbFtoA(float i, char b[], size_t size) {
 	return ++end;
 }
 
-inline char* cbConcatStr(cbArena* arena,char *first, size_t firstLength, char *second, size_t secondLength)
+inline char* cbConcatStr(char* target, mem_size targetSize, char *first, mem_size firstLength, char *second, mem_size secondLength)
 {
-	char * newString = (char *)PushSize(arena, firstLength + secondLength - 1);
+	Assert(targetSize >= firstLength + secondLength - 1);
 
 	int index = 0;
 	while(*first)
-		newString[index++] = *first++;
+		target[index++] = *first++;
 	while(*second)
-		newString[index++] = *second++;
+		target[index++] = *second++;
 
-	newString[index] = 0;
-	return newString;
+	target[index] = 0;
+	return target;
 }

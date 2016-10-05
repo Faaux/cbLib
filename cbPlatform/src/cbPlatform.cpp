@@ -11,6 +11,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#include "cbFont.cpp"
+
 #ifdef UNICODE
 typedef LPWSTR LPTSTR;
 #else
@@ -23,8 +25,6 @@ struct Win32GameCode
     FILETIME LastWriteTime;
 
     game_loop *GameLoop;
-    game_init *GameInit;
-    game_free *GameFree;
     bool IsValid;
 };
 internal HWND _hWindow;
@@ -295,7 +295,7 @@ internal FILETIME GetLastWriteTime(char *fileName)
     return result;
 }
 
-internal Win32GameCode Win32LoadGameCode(Win32Memory *gameMemory)
+internal Win32GameCode Win32LoadGameCode()
 {
     Win32GameCode result = {};
 
@@ -311,13 +311,9 @@ internal Win32GameCode Win32LoadGameCode(Win32Memory *gameMemory)
     if (result.GameCodeDLL)
     {
         game_loop *loop = (game_loop *)GetProcAddress(result.GameCodeDLL, "GameLoop");
-        game_init *init = (game_init *)GetProcAddress(result.GameCodeDLL, "GameInit");
-        game_free *free = (game_free *)GetProcAddress(result.GameCodeDLL, "GameFree");
-        if (loop && init && free)
+        if (loop)
         {
             result.GameLoop = loop;
-            result.GameInit = init;
-            result.GameFree = free;
             result.IsValid = true;
         }
         else
@@ -333,19 +329,10 @@ internal Win32GameCode Win32LoadGameCode(Win32Memory *gameMemory)
     if (!result.IsValid)
     {
         result.GameLoop = GameLoopStub;
-        result.GameInit = GameInitStub;
     }
 
-    Win32PlatformCode platformCode;
-    platformCode.SwapBuffer = &Win32SwapBuffer;
-    platformCode.cbReadFile = &Win32ReadFile;
-    platformCode.cbFreeFile = &Win32FreeFile;
-    platformCode.cbFreeImage = &Win32FreeImage;
-    platformCode.cbLoadImage = &Win32LoadImage;
-    platformCode.GetWindowHeight = &GetWindowHeight;
-    platformCode.GetWindowWidth = &GetWindowWidth;
+    
 
-    result.GameInit(platformCode, gameMemory);
 
     return result;
 }
@@ -354,7 +341,6 @@ internal void Win32UnloadGameCode(Win32GameCode *gameCode)
 {
     if (gameCode->GameCodeDLL)
     {
-		gameCode->GameFree();
         if (!FreeLibrary(gameCode->GameCodeDLL))
         {
             auto error = GetLastError();
@@ -372,24 +358,34 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Win32InitWindowAndOpenGL();
 
 	// Allocate all the memory we ever need
-	void *transientMem = VirtualAlloc(nullptr, Megabytes(64), MEM_COMMIT, PAGE_READWRITE);
+	const mem_size transSize = Megabytes(256);
+	void *transientMem = VirtualAlloc(nullptr, transSize, MEM_COMMIT, PAGE_READWRITE);
 	Assert(transientMem);
-	cbArena transArena;
-	InitArena(&transArena, Megabytes(64), transientMem);
 
-
-	void *permanentMem = VirtualAlloc(nullptr, Megabytes(512), MEM_COMMIT, PAGE_READWRITE);
+	const mem_size permSize = Megabytes(64);
+	void *permanentMem = VirtualAlloc(nullptr, permSize, MEM_COMMIT, PAGE_READWRITE);
 	Assert(permanentMem);
-	cbArena permArena;
-	InitArena(&permArena, Megabytes(512), permanentMem);
-
-	Win32Memory gameMemory;
-	gameMemory.permanentStorage = &permArena;
-	gameMemory.transientStorage = &transArena;
 
 
+	Win32PlatformCode platformCode;
+	platformCode.SwapBuffer = &Win32SwapBuffer;
+	platformCode.cbReadFile = &Win32ReadFile;
+	platformCode.cbFreeFile = &Win32FreeFile;
+	platformCode.cbFreeImage = &Win32FreeImage;
+	platformCode.cbLoadImage = &Win32LoadImage;
+	platformCode.GetWindowHeight = &GetWindowHeight;
+	platformCode.GetWindowWidth = &GetWindowWidth;
 
-    Win32GameCode gameCode = Win32LoadGameCode(&gameMemory);
+	GameMemory gameState;
+	gameState.PermanentStorageSize = permSize;
+	gameState.PermanentStorage = &permanentMem;
+	gameState.TransientStorageSize = transSize;
+	gameState.TransientStorage = &transientMem;
+	gameState.Platform = platformCode;
+
+
+
+    Win32GameCode gameCode = Win32LoadGameCode();
 
     while (!_isCloseRequested)
     {
@@ -397,13 +393,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (CompareFileTime(&lastWriteTime, &gameCode.LastWriteTime) != 0)
         {
             Win32UnloadGameCode(&gameCode);
-            gameCode = Win32LoadGameCode(&gameMemory);
+            gameCode = Win32LoadGameCode();
         }
         if (!gameCode.IsValid)
             continue;
-
-		// Clear TransStorage
-		Clear(&transArena);
 
         glClear(GL_COLOR_BUFFER_BIT);
         float deltaTime = Win32UpdatePlatform();
@@ -414,7 +407,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // Let Game make logic and render and stuff
         // this will also do the timing
-        gameCode.GameLoop(deltaTime);
+        gameCode.GameLoop(deltaTime, &gameState);
     }
     return 0;
 }

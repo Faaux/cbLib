@@ -29,19 +29,25 @@ GET_WIN_SIZE(GetWindowWidth);
 typedef GET_WIN_SIZE(win32_get_window_height);
 GET_WIN_SIZE(GetWindowHeight);
 
-struct Win32Memory
-{
-	cbArena *permanentStorage;
-	cbArena *transientStorage;
-};
-
 struct Win32PlatformCode
 {
-    win32_swap_buffer *SwapBuffer;
-    win32_read_file *cbReadFile;
-    win32_free_file *cbFreeFile;
-    win32_load_image *cbLoadImage;
-    win32_free_image *cbFreeImage;
-    win32_get_window_width *GetWindowWidth;
-    win32_get_window_height *GetWindowHeight;
+	win32_swap_buffer *SwapBuffer;
+	win32_read_file *cbReadFile;
+	win32_free_file *cbFreeFile;
+	win32_load_image *cbLoadImage;
+	win32_free_image *cbFreeImage;
+	win32_get_window_width *GetWindowWidth;
+	win32_get_window_height *GetWindowHeight;
 };
+
+struct GameMemory
+{
+	mem_size PermanentStorageSize;
+	void *PermanentStorage;
+
+	mem_size TransientStorageSize;
+	void *TransientStorage;
+
+	Win32PlatformCode Platform;
+};
+

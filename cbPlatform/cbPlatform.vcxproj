@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\cbFont.cpp" />
     <ClCompile Include="src\cbMemory.cpp" />
     <ClCompile Include="src\cbPlatform.cpp" />
   </ItemGroup>

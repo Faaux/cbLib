@@ -7,13 +7,13 @@
 struct cbArena
 {
 	uint8 *Start;
-	size_t Size;
-	size_t Used;
+	mem_size Size;
+	mem_size Used;
 };
 
 #define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))
 #define ZeroArray(Count, Pointer) ZeroSize(Count*sizeof((Pointer)[0]), Pointer)
-inline void ZeroSize(size_t size, void *ptr)
+inline void ZeroSize(mem_size size, void *ptr)
 {
 	uint8 *byte = (uint8 *)ptr;
 	while (size--)
@@ -22,7 +22,7 @@ inline void ZeroSize(size_t size, void *ptr)
 	}
 }
 
-inline void InitArena(cbArena *mem, size_t size, void* ptr)
+inline void InitArena(cbArena *mem, mem_size size, void* ptr)
 {
 	mem->Start = (uint8*)ptr;
 	mem->Size = size;
@@ -55,12 +55,12 @@ inline ArenaPushParams GetDefaultArenaParams()
 #define PushSize(Arena, Size, ...) PushSize_(Arena, Size, ## __VA_ARGS__)
 #define PushCopy(Arena, Size, Source, ...) Copy(Size, Source, PushSize_(Arena, Size, ## __VA_ARGS__))
 
-inline size_t GetAlignmentSize(cbArena* mem, uint32 alignment)
+inline mem_size GetAlignmentSize(cbArena* mem, uint32 alignment)
 {
-	size_t result = 0;
+	mem_size result = 0;
 
-	size_t resultPointer = (size_t)mem->Start + mem->Used;
-	size_t alignmentMask = alignment - 1;
+	mem_size resultPointer = (mem_size)mem->Start + mem->Used;
+	mem_size alignmentMask = alignment - 1;
 
 	if(resultPointer & alignmentMask)
 	{
@@ -70,10 +70,10 @@ inline size_t GetAlignmentSize(cbArena* mem, uint32 alignment)
 	return result;
 }
 
-inline void *PushSize_(cbArena *mem, size_t size, ArenaPushParams params = GetDefaultArenaParams())
+inline void *PushSize_(cbArena *mem, mem_size size, ArenaPushParams params = GetDefaultArenaParams())
 {
-	size_t alignmentSize = GetAlignmentSize(mem, params.Alignment);
-	size_t sizeWithAlignment = size + alignmentSize;
+	mem_size alignmentSize = GetAlignmentSize(mem, params.Alignment);
+	mem_size sizeWithAlignment = size + alignmentSize;
 
 	Assert(mem->Used + sizeWithAlignment <= mem->Size);
 
@@ -94,14 +94,14 @@ inline void Clear(cbArena* mem)
 	InitArena(mem, mem->Size, mem->Start);
 }
 
-inline void SubArena(cbArena *result, cbArena *arena, size_t size, ArenaPushParams Params = GetDefaultArenaParams())
+inline void SubArena(cbArena *result, cbArena *arena, mem_size size, ArenaPushParams Params = GetDefaultArenaParams())
 {
 	result->Size = size;
 	result->Start = (uint8 *)PushSize_(arena, size, Params);
 	result->Used = 0;
 }
 
-inline void * Copy(size_t size, void *sourceInit, void *destInit)
+inline void * Copy(mem_size size, void *sourceInit, void *destInit)
 {
 	uint8 *source = (uint8 *)sourceInit;
 	uint8 *dest = (uint8 *)destInit;

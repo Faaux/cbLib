@@ -1,8 +1,10 @@
+#include <cstdio>
+
 #include <GL/glew.h>
 #include <GLM.h>
-#include <cbGame.h>
 #include <cbInclude.h>
-#include <cstdio>
+#include <cbPlatform.h>
+
 
 struct SDFFontData
 {
@@ -122,7 +124,7 @@ internal void InitShader()
 internal void InitTexture(char *fileName)
 {
     int width, height;
-    uint8 *atlas = PlatformCode.cbLoadImage(fileName, width, height);
+    uint8 *atlas = Win32LoadImage(fileName, width, height);
 
     glGenTextures(1, &texId);
     glBindTexture(GL_TEXTURE_2D, texId);
@@ -132,7 +134,7 @@ internal void InitTexture(char *fileName)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
-    PlatformCode.cbFreeImage(atlas);
+    Win32FreeImage(atlas);
 }
 
 internal void LoadSDFMetaData()
@@ -203,8 +205,8 @@ internal void DrawString(char *text, float sizeInPx, int x, int y)
 		InitSDF();
 	}
 
-	float winWidth = (float)PlatformCode.GetWindowWidth();
-	float winHeight = (float)PlatformCode.GetWindowHeight();
+	float winWidth = (float)GetWindowWidth();
+	float winHeight = (float)GetWindowHeight();
 
 	glm::mat4 projection = glm::ortho(0.0f, winWidth, 0.0f, winHeight);
 
@@ -248,8 +250,6 @@ internal void DrawString(char *text, float sizeInPx, int x, int y)
 			if(!sdfGlyphData[toPrint].IsValid)
 				continue;
 
-			int glyphHeight = sdfGlyphData[toPrint].Height;
-			int glyphWidth = sdfGlyphData[toPrint].Width;
 			float glyphHeightScaled = sdfGlyphData[toPrint].Height * scale;
 			float glyphWidthScaled = sdfGlyphData[toPrint].Width * scale;
 
