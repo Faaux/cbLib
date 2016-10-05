@@ -42,5 +42,5 @@ xcopy "ThirdParty\bin" ".\bin" /S /Y /q
 xcopy ".\res" ".\bin" /S /Y /q
 
 ctime -end cbLib.ctm %LastError%
-pause
+
 exit
