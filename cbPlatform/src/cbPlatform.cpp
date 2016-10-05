@@ -24,6 +24,7 @@ struct Win32GameCode
 
     game_loop *GameLoop;
     game_init *GameInit;
+    game_free *GameFree;
     bool IsValid;
 };
 internal HWND _hWindow;
@@ -294,7 +295,7 @@ internal FILETIME GetLastWriteTime(char *fileName)
     return result;
 }
 
-internal Win32GameCode Win32LoadGameCode()
+internal Win32GameCode Win32LoadGameCode(Win32Memory *gameMemory)
 {
     Win32GameCode result = {};
 
@@ -311,10 +312,12 @@ internal Win32GameCode Win32LoadGameCode()
     {
         game_loop *loop = (game_loop *)GetProcAddress(result.GameCodeDLL, "GameLoop");
         game_init *init = (game_init *)GetProcAddress(result.GameCodeDLL, "GameInit");
-        if (loop && init)
+        game_free *free = (game_free *)GetProcAddress(result.GameCodeDLL, "GameFree");
+        if (loop && init && free)
         {
             result.GameLoop = loop;
             result.GameInit = init;
+            result.GameFree = free;
             result.IsValid = true;
         }
         else
@@ -342,7 +345,7 @@ internal Win32GameCode Win32LoadGameCode()
     platformCode.GetWindowHeight = &GetWindowHeight;
     platformCode.GetWindowWidth = &GetWindowWidth;
 
-    result.GameInit(platformCode);
+    result.GameInit(platformCode, gameMemory);
 
     return result;
 }
@@ -351,6 +354,7 @@ internal void Win32UnloadGameCode(Win32GameCode *gameCode)
 {
     if (gameCode->GameCodeDLL)
     {
+		gameCode->GameFree();
         if (!FreeLibrary(gameCode->GameCodeDLL))
         {
             auto error = GetLastError();
@@ -364,16 +368,28 @@ internal void Win32UnloadGameCode(Win32GameCode *gameCode)
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-    char pathToExe[MAX_PATH] = {};
-    DWORD ret = GetModuleFileNameA(NULL, pathToExe, sizeof(pathToExe));
-
-    if (ret == 0 || ret == sizeof(pathToExe))
-        FatalExit(-1);
-
     // Init Game
     Win32InitWindowAndOpenGL();
 
-    Win32GameCode gameCode = Win32LoadGameCode();
+	// Allocate all the memory we ever need
+	void *transientMem = VirtualAlloc(nullptr, Megabytes(64), MEM_COMMIT, PAGE_READWRITE);
+	Assert(transientMem);
+	cbArena transArena;
+	InitArena(&transArena, Megabytes(64), transientMem);
+
+
+	void *permanentMem = VirtualAlloc(nullptr, Megabytes(512), MEM_COMMIT, PAGE_READWRITE);
+	Assert(permanentMem);
+	cbArena permArena;
+	InitArena(&permArena, Megabytes(512), permanentMem);
+
+	Win32Memory gameMemory;
+	gameMemory.permanentStorage = &permArena;
+	gameMemory.transientStorage = &transArena;
+
+
+
+    Win32GameCode gameCode = Win32LoadGameCode(&gameMemory);
 
     while (!_isCloseRequested)
     {
@@ -381,10 +397,13 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (CompareFileTime(&lastWriteTime, &gameCode.LastWriteTime) != 0)
         {
             Win32UnloadGameCode(&gameCode);
-            gameCode = Win32LoadGameCode();
+            gameCode = Win32LoadGameCode(&gameMemory);
         }
         if (!gameCode.IsValid)
             continue;
+
+		// Clear TransStorage
+		Clear(&transArena);
 
         glClear(GL_COLOR_BUFFER_BIT);
         float deltaTime = Win32UpdatePlatform();

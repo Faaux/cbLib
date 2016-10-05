@@ -1,12 +1,13 @@
 #pragma once
 #include <cstdio>
+#include <cbMemory.h>
 
-inline char* cbItoA(int i, char b[], int size) {
+inline char* cbItoA(int i, char b[], size_t size) {
 	int count = sprintf_s(b, size,"%d", i);
 	return b + count;
 }
 
-inline char* cbFtoA(float i, char b[], int size) {
+inline char* cbFtoA(float i, char b[], size_t size) {
 	int count = sprintf_s(b, size, "%f", i);
 
 	char * end = b + count;
@@ -14,9 +15,9 @@ inline char* cbFtoA(float i, char b[], int size) {
 	return ++end;
 }
 
-inline char* cbConcatStr(char *first, int firstLength, char *second, int secondLength)
+inline char* cbConcatStr(cbArena* arena,char *first, size_t firstLength, char *second, size_t secondLength)
 {
-	char * newString = (char *)malloc(firstLength + secondLength - 1);
+	char * newString = (char *)PushSize(arena, firstLength + secondLength - 1);
 
 	int index = 0;
 	while(*first)

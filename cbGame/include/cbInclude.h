@@ -1,6 +1,9 @@
 #pragma once
 #include <stdint.h>
 
+#define cbSlow true
+
+
 #ifdef __cplusplus
 #define EXPORT extern "C" __declspec(dllexport)
 #else
@@ -16,6 +19,12 @@
 
 #define Pi 3.14159265358979323846f
 #define Pi_2 1.57079632679489661923f
+
+#if cbSlow
+#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
+#else
+#define Assert(Expression)
+#endif
 
 typedef uint32_t uint;
 

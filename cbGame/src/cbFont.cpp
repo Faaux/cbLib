@@ -29,8 +29,6 @@ static SDFGlyphData sdfGlyphData[256];
 static GLuint texId;
 static GLuint quadVAO;
 static GLuint quadVBO;
-static GLuint vertexShaderId;
-static GLuint fragmentShaderId;
 static GLuint fontShaderId;
 
 static const char *basicFontVertexShader = "#version 330 core\n"
@@ -75,8 +73,8 @@ internal void InitVaoVbo()
 
 internal void InitShader()
 {
-    vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
-    fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
+    GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
 
     glShaderSource(vertexShaderId, 1, &basicFontVertexShader, NULL);
     glCompileShader(vertexShaderId);
@@ -124,7 +122,7 @@ internal void InitShader()
 internal void InitTexture(char *fileName)
 {
     int width, height;
-    unsigned char *atlas = PlatformCode.cbLoadImage(fileName, width, height);
+    uint8 *atlas = PlatformCode.cbLoadImage(fileName, width, height);
 
     glGenTextures(1, &texId);
     glBindTexture(GL_TEXTURE_2D, texId);
@@ -317,4 +315,12 @@ internal void DrawString(char *text, float sizeInPx, int x, int y)
 
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
+}
+
+internal void FreeFont()
+{
+	glDeleteVertexArrays(1, &quadVAO);
+	glDeleteBuffers(1, &quadVBO);
+	glDeleteProgram(fontShaderId);
+	glDeleteTextures(1, &texId);
 }

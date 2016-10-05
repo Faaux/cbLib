@@ -11,9 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\cbMemory.cpp" />
     <ClCompile Include="src\cbPlatform.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\cbMemory.h" />
     <ClInclude Include="include\cbPlatform.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

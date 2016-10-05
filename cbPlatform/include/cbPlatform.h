@@ -1,5 +1,6 @@
 #pragma once
 #include <cbInclude.h>
+#include <cbMemory.h>
 
 #define FREE_IMAGE(name) void name(unsigned char *image)
 typedef FREE_IMAGE(win32_free_image);
@@ -27,6 +28,12 @@ GET_WIN_SIZE(GetWindowWidth);
 
 typedef GET_WIN_SIZE(win32_get_window_height);
 GET_WIN_SIZE(GetWindowHeight);
+
+struct Win32Memory
+{
+	cbArena *permanentStorage;
+	cbArena *transientStorage;
+};
 
 struct Win32PlatformCode
 {
