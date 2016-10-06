@@ -1,15 +1,12 @@
-#include <GL/glew.h>
 #include <cbGame.h>
 #include <cbInclude.h>
 #include <cbBasic.h>
+#include "cbOpenGLRenderer.h"
 
 Win32PlatformCode Platform;
 
-internal void Render(float deltaTime, GameMemory* gameState)
+internal void Render(float deltaTime, GameMemory* memory, cbArena* renderArena)
 {
-    glClearColor(0.2f, 0.4f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 	const mem_size size = 24;
 	char num[size];
 	char text[] = "Frame MS: ";
@@ -21,7 +18,7 @@ internal void Render(float deltaTime, GameMemory* gameState)
 	cbFtoA(smoothedDeltaTime * 1000.f, num, size);
 
 	char* toRender = cbConcatStr(concat, concatSize, text, ArrayCount(text), num, ArrayCount(num));
-    //DrawString(concat, 64.f, 0, 0);
+	PushRenderString(renderArena, 64, 10, 10, concatSize, toRender);
 
     Platform.SwapBuffer();
 }
@@ -46,6 +43,9 @@ EXPORT GAME_LOOP(GameLoop)
 		gameState->IsInitialized = true;
 	}
 
+	cbArena renderArena;
+	InitArena(&renderArena, renderCommands->BufferSize, renderCommands->BufferBase);
+
     Update();
-    Render(deltaTime, gameMemory);
+    Render(deltaTime, gameMemory, &renderArena);
 }

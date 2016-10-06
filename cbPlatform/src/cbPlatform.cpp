@@ -12,6 +12,7 @@
 #include <stb/stb_image.h>
 
 #include "cbFont.cpp"
+#include "cbOpenGLRenderer.h"
 
 #ifdef UNICODE
 typedef LPWSTR LPTSTR;
@@ -358,13 +359,15 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Win32InitWindowAndOpenGL();
 
 	// Allocate all the memory we ever need
-	const mem_size transSize = Megabytes(256);
-	void *transientMem = VirtualAlloc(nullptr, transSize, MEM_COMMIT, PAGE_READWRITE);
-	Assert(transientMem);
 
 	const mem_size permSize = Megabytes(64);
-	void *permanentMem = VirtualAlloc(nullptr, permSize, MEM_COMMIT, PAGE_READWRITE);
+	void *permanentMem = VirtualAlloc(nullptr, permSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	Assert(permanentMem);
+
+	const mem_size transSize = Megabytes(256);
+	void *transientMem = VirtualAlloc(nullptr, transSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	Assert(transientMem);
+
 
 
 	Win32PlatformCode platformCode;
@@ -405,9 +408,49 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (_isCloseRequested)
             continue;
 
-        // Let Game make logic and render and stuff
-        // this will also do the timing
-        gameCode.GameLoop(deltaTime, &gameState);
+		// Clear Render queue
+
+		RenderCommandGroup commands;
+		commands.Height = GetWindowHeight();
+		commands.Width = GetWindowWidth();
+		commands.BufferSize = Megabytes(4);
+		commands.BufferBase = VirtualAlloc(nullptr, commands.BufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+		commands.ClearColor = glm::vec4(0.2f, 0.4f, 0.3f, 1.0f);
+
+        gameCode.GameLoop(deltaTime, &gameState, &commands);
+
+		// Render here
+
+		glClearColor(commands.ClearColor.r, commands.ClearColor.g, commands.ClearColor.b, commands.ClearColor.a);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		uint8 * cmdPtr = (uint8*)commands.BufferBase;
+		for(;;)
+		{
+			RenderCommand* command = (RenderCommand*)cmdPtr;
+			if (!command->IsValid)
+				break;
+			switch (command->Action)
+			{
+			case RenderString:
+			{
+				RenderStringData  *data = (RenderStringData *)command->Data;
+				DrawString(data);
+
+				break;
+			}
+			default: 
+				Assert(false);
+				break;
+			}
+
+			cmdPtr += command->OffsetToNext;
+		}
+
+		Win32SwapBuffer();
+
+		
+		// Work down the render queue
     }
     return 0;
 }

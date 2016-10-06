@@ -1,6 +1,6 @@
 #pragma once
 #include <cbInclude.h>
-#include <cbMemory.h>
+#include <GLM.h>
 
 #define FREE_IMAGE(name) void name(unsigned char *image)
 typedef FREE_IMAGE(win32_free_image);
@@ -51,3 +51,31 @@ struct GameMemory
 	Win32PlatformCode Platform;
 };
 
+struct RenderCommandGroup
+{
+	uint32 Width, Height;
+
+	uint32 BufferSize;
+	void *BufferBase;
+
+	glm::vec4 ClearColor;
+};
+
+enum RenderAction
+{
+	RenderString
+};
+
+struct RenderCommand
+{
+	RenderAction Action;
+	uint64 OffsetToNext;
+	bool IsValid;
+	void *Data;
+};
+
+#define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory, RenderCommandGroup *renderCommands)
+typedef GAME_LOOP(game_loop);
+inline GAME_LOOP(GameLoopStub)
+{
+}

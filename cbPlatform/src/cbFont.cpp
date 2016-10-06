@@ -4,6 +4,7 @@
 #include <GLM.h>
 #include <cbInclude.h>
 #include <cbPlatform.h>
+#include "cbOpenGLRenderer.h"
 
 
 struct SDFFontData
@@ -196,7 +197,7 @@ internal void InitSDF()
 	InitFont();
 }
 
-internal void DrawString(char *text, float sizeInPx, int x, int y)
+internal void DrawString(RenderStringData *data)
 {
 	static bool wasInit = false;
 	if (!wasInit)
@@ -216,7 +217,7 @@ internal void DrawString(char *text, float sizeInPx, int x, int y)
 	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
 	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
 
-	float scale = sizeInPx / sdfFontData.LineHeight;
+	float scale = (float)data->SizeInPx / sdfFontData.LineHeight;
 	float smoothed;
 	if(scale < 1)
 	{
@@ -239,12 +240,12 @@ internal void DrawString(char *text, float sizeInPx, int x, int y)
 
 	glUseProgram(fontShaderId);
 
-	float posX = (float)x;
-	float posY = winHeight - y;
+	float posX = (float)data->X;
+	float posY = winHeight - data->Y;
 
-	while (*text)
+	while (*data->Text)
 	{
-		char toPrint = *text;
+		char toPrint = *data->Text;
 		if (toPrint >= 0 && toPrint <= 255)
 		{
 			if(!sdfGlyphData[toPrint].IsValid)
@@ -310,7 +311,7 @@ internal void DrawString(char *text, float sizeInPx, int x, int y)
 			glBindVertexArray(0);
 		}
 
-		++text;
+		++data->Text;
 	}
 
 	glEnable(GL_DEPTH_TEST);

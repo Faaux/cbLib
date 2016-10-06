@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\cbMemory.h" />
+    <ClInclude Include="include\cbOpenGLRenderer.h" />
     <ClInclude Include="include\cbPlatform.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

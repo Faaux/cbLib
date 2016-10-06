@@ -1,13 +1,8 @@
 #pragma once
 #include <cbPlatform.h>
+#include <cbMemory.h>
 
 extern Win32PlatformCode Platform;
-
-#define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory)
-typedef GAME_LOOP(game_loop);
-inline GAME_LOOP(GameLoopStub)
-{
-}
 
 struct GameState
 {
