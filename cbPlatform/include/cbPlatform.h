@@ -56,23 +56,14 @@ struct RenderCommandGroup
 	uint32 Width, Height;
 
 	uint32 BufferSize;
-	void *BufferBase;
+	uint8 *BufferBase;
+	uint8 *BufferDataAt;
 
 	glm::vec4 ClearColor;
 };
+#define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
+{Width, Height, MaxPushBufferSize, (uint8 *)PushBuffer, ((uint8 *)PushBuffer) + MaxPushBufferSize};
 
-enum RenderAction
-{
-	RenderString
-};
-
-struct RenderCommand
-{
-	RenderAction Action;
-	uint64 OffsetToNext;
-	bool IsValid;
-	void *Data;
-};
 
 #define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory, RenderCommandGroup *renderCommands)
 typedef GAME_LOOP(game_loop);

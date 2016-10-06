@@ -1,11 +1,11 @@
 #include <cbGame.h>
 #include <cbInclude.h>
 #include <cbBasic.h>
-#include "cbOpenGLRenderer.h"
+#include <cbRenderGroup.h>
 
 Win32PlatformCode Platform;
 
-internal void Render(float deltaTime, GameMemory* memory, cbArena* renderArena)
+internal void Render(float deltaTime, GameMemory* memory, RenderCommandGroup* renderCommands)
 {
 	const mem_size size = 24;
 	char num[size];
@@ -18,9 +18,15 @@ internal void Render(float deltaTime, GameMemory* memory, cbArena* renderArena)
 	cbFtoA(smoothedDeltaTime * 1000.f, num, size);
 
 	char* toRender = cbConcatStr(concat, concatSize, text, ArrayCount(text), num, ArrayCount(num));
-	PushRenderString(renderArena, 64, 10, 10, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 10, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 64 * 1, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 64 * 2, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 64 * 3, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 64 * 4, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 64 * 5, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 64 * 6, concatSize, toRender);
+	PushRenderString(renderCommands, 64, 10, 64 * 7, concatSize, toRender);
 
-    Platform.SwapBuffer();
 }
 
 internal void Update()
@@ -43,9 +49,7 @@ EXPORT GAME_LOOP(GameLoop)
 		gameState->IsInitialized = true;
 	}
 
-	cbArena renderArena;
-	InitArena(&renderArena, renderCommands->BufferSize, renderCommands->BufferBase);
 
     Update();
-    Render(deltaTime, gameMemory, &renderArena);
+    Render(deltaTime, gameMemory, renderCommands);
 }

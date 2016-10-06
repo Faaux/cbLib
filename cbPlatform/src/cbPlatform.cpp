@@ -7,12 +7,13 @@
 #include <cbGame.h>
 #include <cbInclude.h>
 #include <cbPlatform.h>
+#include <cbRenderGroup.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
 #include "cbFont.cpp"
-#include "cbOpenGLRenderer.h"
+
 
 #ifdef UNICODE
 typedef LPWSTR LPTSTR;
@@ -361,11 +362,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	// Allocate all the memory we ever need
 
 	const mem_size permSize = Megabytes(64);
-	void *permanentMem = VirtualAlloc(nullptr, permSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	void *permanentMem = VirtualAlloc(0, permSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	Assert(permanentMem);
 
 	const mem_size transSize = Megabytes(256);
-	void *transientMem = VirtualAlloc(nullptr, transSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	void *transientMem = VirtualAlloc(0, transSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	Assert(transientMem);
 
 
@@ -381,12 +382,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	GameMemory gameState;
 	gameState.PermanentStorageSize = permSize;
-	gameState.PermanentStorage = &permanentMem;
+	gameState.PermanentStorage = permanentMem;
 	gameState.TransientStorageSize = transSize;
-	gameState.TransientStorage = &transientMem;
+	gameState.TransientStorage = transientMem;
 	gameState.Platform = platformCode;
 
-
+	uint32 renderCommandSize = Megabytes(4);
+	void* renderCommandBase = VirtualAlloc(0, renderCommandSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+	
 
     Win32GameCode gameCode = Win32LoadGameCode();
 
@@ -408,14 +411,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (_isCloseRequested)
             continue;
 
-		// Clear Render queue
-
-		RenderCommandGroup commands;
-		commands.Height = GetWindowHeight();
-		commands.Width = GetWindowWidth();
-		commands.BufferSize = Megabytes(4);
-		commands.BufferBase = VirtualAlloc(nullptr, commands.BufferSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-		commands.ClearColor = glm::vec4(0.2f, 0.4f, 0.3f, 1.0f);
+		RenderCommandGroup commands = RenderCommandStruct(renderCommandSize, renderCommandBase, GetWindowWidth(), GetWindowHeight());
+		commands.ClearColor = glm::vec4(0.2f, 0.4f, 0.3f, 1.0f);	
 
         gameCode.GameLoop(deltaTime, &gameState, &commands);
 
@@ -424,19 +421,19 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 		glClearColor(commands.ClearColor.r, commands.ClearColor.g, commands.ClearColor.b, commands.ClearColor.a);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		uint8 * cmdPtr = (uint8*)commands.BufferBase;
-		for(;;)
+		uint8 * cmdPtr = (uint8*)commands.BufferDataAt;
+		while(cmdPtr < commands.BufferBase + commands.BufferSize)
 		{
-			RenderCommand* command = (RenderCommand*)cmdPtr;
-			if (!command->IsValid)
-				break;
+			RenderCommandHeader* command = (RenderCommandHeader*)cmdPtr;
+			uint32 offset = sizeof(RenderCommandHeader);
 			switch (command->Action)
 			{
-			case RenderString:
+			case RenderActionType_RenderStringData:
 			{
-				RenderStringData  *data = (RenderStringData *)command->Data;
+				RenderStringData *data = (RenderStringData *)((uint8 *)command + sizeof(*command));
 				DrawString(data);
 
+				offset += sizeof(RenderStringData);
 				break;
 			}
 			default: 
@@ -444,8 +441,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 				break;
 			}
 
-			cmdPtr += command->OffsetToNext;
+			cmdPtr += offset;
 		}
+
+
 
 		Win32SwapBuffer();
 

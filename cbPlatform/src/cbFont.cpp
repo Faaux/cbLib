@@ -4,7 +4,7 @@
 #include <GLM.h>
 #include <cbInclude.h>
 #include <cbPlatform.h>
-#include "cbOpenGLRenderer.h"
+#include <cbRenderGroup.h>
 
 
 struct SDFFontData
@@ -243,9 +243,10 @@ internal void DrawString(RenderStringData *data)
 	float posX = (float)data->X;
 	float posY = winHeight - data->Y;
 
-	while (*data->Text)
+	char* text = &data->Text[0];
+	while (*text)
 	{
-		char toPrint = *data->Text;
+		char toPrint = *text;
 		if (toPrint >= 0 && toPrint <= 255)
 		{
 			if(!sdfGlyphData[toPrint].IsValid)
@@ -311,7 +312,7 @@ internal void DrawString(RenderStringData *data)
 			glBindVertexArray(0);
 		}
 
-		++data->Text;
+		++text;
 	}
 
 	glEnable(GL_DEPTH_TEST);
