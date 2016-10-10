@@ -246,7 +246,7 @@ internal void DrawString(RenderStringData *data)
 	char* text = &data->Text[0];
 	while (*text)
 	{
-		char toPrint = *text;
+		char toPrint = *text++;
 		if (toPrint >= 0 && toPrint <= 255)
 		{
 			if(!sdfGlyphData[toPrint].IsValid)
@@ -311,13 +311,14 @@ internal void DrawString(RenderStringData *data)
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 			glBindVertexArray(0);
 		}
-
-		++text;
 	}
 
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 }
+
+
+
 
 internal void FreeFont()
 {

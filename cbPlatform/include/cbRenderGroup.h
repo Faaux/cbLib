@@ -22,6 +22,7 @@ inline void* PushRenderElement_(RenderCommandGroup* renderGroup, uint32 dataSize
 {
 	uint32 totalSize = dataSize + sizeof(RenderCommandHeader);
 
+	Assert(renderGroup->BufferDataAt - totalSize >= renderGroup->BufferBase)
 	renderGroup->BufferDataAt -= totalSize;
 	RenderCommandHeader *header = (RenderCommandHeader *)renderGroup->BufferDataAt;
 	header->Action = action;

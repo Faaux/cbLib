@@ -389,7 +389,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	uint32 renderCommandSize = Megabytes(4);
 	void* renderCommandBase = VirtualAlloc(0, renderCommandSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-	
+
+
 
     Win32GameCode gameCode = Win32LoadGameCode();
 
