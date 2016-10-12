@@ -390,7 +390,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	uint32 renderCommandSize = Megabytes(4);
 	void* renderCommandBase = VirtualAlloc(0, renderCommandSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 
-
+	glClearColor(0.2f, 0.4f, 0.3f, 1.0f);
 
     Win32GameCode gameCode = Win32LoadGameCode();
 
@@ -405,7 +405,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (!gameCode.IsValid)
             continue;
 
-        glClear(GL_COLOR_BUFFER_BIT);
         float deltaTime = Win32UpdatePlatform();
 
         // Early exit
@@ -413,14 +412,16 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             continue;
 
 		RenderCommandGroup commands = RenderCommandStruct(renderCommandSize, renderCommandBase, GetWindowWidth(), GetWindowHeight());
-		commands.ClearColor = glm::vec4(0.2f, 0.4f, 0.3f, 1.0f);	
 
         gameCode.GameLoop(deltaTime, &gameState, &commands);
 
 		// Render here
-
-		glClearColor(commands.ClearColor.r, commands.ClearColor.g, commands.ClearColor.b, commands.ClearColor.a);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Render console
+		GameState* ingameState = (GameState*)gameState.PermanentStorage;
+		if (ingameState->Console->IsVisible)
+			RenderConsole(&commands, ingameState->Console);
 
 		uint8 * cmdPtr = (uint8*)commands.BufferDataAt;
 		while(cmdPtr < commands.BufferBase + commands.BufferSize)
@@ -443,10 +444,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 			}
 
 			cmdPtr += offset;
-		}
-
-
-
+		}		
 		Win32SwapBuffer();
 
 		

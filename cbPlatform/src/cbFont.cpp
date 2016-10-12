@@ -6,12 +6,12 @@
 #include <cbPlatform.h>
 #include <cbRenderGroup.h>
 
-
 struct SDFFontData
 {
 	int LineBase;
 	int LineHeight;
 	int Width, Height;
+	int Size;
 	int Padding[4];
 };
 
@@ -45,21 +45,26 @@ static const char *basicFontVertexShader = "#version 330 core\n"
                                            "};\n";
 
 static const char *basicFontFragmentShader = "#version 330 core\n"
+
                                              "in vec2 TexCoords;\n"
                                              "out vec4 color;\n"
+
                                              "uniform sampler2D text;\n"
                                              "uniform vec3 textColor;\n"
 											 "uniform float smoothed;\n"
+
                                              "const float solid = 0.5;\n"
+
                                              "void main()\n"
                                              "{\n"
                                              "	float distance = texture2D(text, TexCoords).a;\n"
-                                             "	float alpha = smoothstep(solid, solid + smoothed, distance);\n"
+                                             "	float alpha = smoothstep(solid - smoothed, solid + smoothed, distance);\n"
                                              "	color = vec4(textColor, alpha);\n"
                                              "};\n";
 
 internal void InitVaoVbo()
 {
+#if 0
     glGenVertexArrays(1, &quadVAO);
     glBindVertexArray(quadVAO);
 
@@ -72,6 +77,7 @@ internal void InitVaoVbo()
 
     glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)0);
     glEnableVertexAttribArray(0);
+#endif
 }
 
 internal void InitShader()
@@ -132,7 +138,7 @@ internal void InitTexture(char *fileName)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, atlas);
     // can free temp_bitmap at this point
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
     Win32FreeImage(atlas);
@@ -151,7 +157,7 @@ internal void LoadSDFMetaData()
 	{		
 		fgets(line, sizeof(line), fid);
 		int index,x,y,width,height,xoffset,yoffset,xadvance;
-		if (sscanf_s(line, "info face=\"Segoe UI Bold\" size=59 bold=0 italic=0 charset=\"\" unicode=0 stretchH=100 smooth=1 aa=1 padding=%i,%i,%i,%i spacing=0,0", &sdfFontData.Padding[0], &sdfFontData.Padding[1], &sdfFontData.Padding[2], &sdfFontData.Padding[3]))
+		if (sscanf_s(line, "info face=\"Segoe UI Bold\" size=%i bold=0 italic=0 charset=\"\" unicode=0 stretchH=100 smooth=1 aa=1 padding=%i,%i,%i,%i spacing=0,0", &sdfFontData.Size, &sdfFontData.Padding[0], &sdfFontData.Padding[1], &sdfFontData.Padding[2], &sdfFontData.Padding[3]))
 		{
 
 		}
@@ -209,6 +215,72 @@ internal void DrawString(RenderStringData *data)
 	float winWidth = (float)GetWindowWidth();
 	float winHeight = (float)GetWindowHeight();
 
+	float scale = (float)data->Size / (float)sdfFontData.Size;
+
+	float posX = (float)data->X;
+	float posY = winHeight - data->Y;
+
+	char* text = &data->Text[0];
+	uint32 verticeCount = 6 * data->CurrentLength;
+	float *vertices = (float *)malloc(sizeof(float) * verticeCount * 4);
+	float *firstVertice = vertices;
+	while (*text)
+	{
+		char toPrint = *text++;
+
+		Assert(toPrint >= 0 && toPrint <= 255);
+		Assert(sdfGlyphData[toPrint].IsValid);				
+			
+		float glyphHeightScaled = sdfGlyphData[toPrint].Height * scale;
+		float glyphWidthScaled = sdfGlyphData[toPrint].Width * scale;
+
+		float texLeft = (float)sdfGlyphData[toPrint].TexX;
+		float texTop = (float)sdfGlyphData[toPrint].TexY;
+		float texWidth = sdfGlyphData[toPrint].TexWidth;
+		float texHeight = sdfGlyphData[toPrint].TexHeight;
+
+		float internalPosX = posX + (sdfGlyphData[toPrint].XOffset * scale);
+		float internalPosY = posY - (sdfGlyphData[toPrint].YOffset * scale);
+
+		posX += sdfGlyphData[toPrint].XAdvance * scale;
+
+		// Top Left
+		*vertices++ = internalPosX;
+		*vertices++ = internalPosY;
+		*vertices++ = texLeft;
+		*vertices++ = texTop;
+
+		// Bottom Left
+		*vertices++ = internalPosX;
+		*vertices++ = internalPosY - glyphHeightScaled;
+		*vertices++ = texLeft;
+		*vertices++ = texTop + texHeight;
+
+		// Bottom Right
+		*vertices++ = internalPosX + glyphWidthScaled;
+		*vertices++ = internalPosY - glyphHeightScaled;
+		*vertices++ = (texLeft + texWidth);
+		*vertices++ = (texTop + texHeight);
+
+		// Top Left
+		*vertices++ = internalPosX;
+		*vertices++ = internalPosY;
+		*vertices++ = texLeft;
+		*vertices++ = texTop;
+
+		// Bottom Right
+		*vertices++ = internalPosX + glyphWidthScaled;
+		*vertices++ = internalPosY - glyphHeightScaled;
+		*vertices++ = (texLeft + texWidth);
+		*vertices++ = (texTop + texHeight);
+
+		// Top Right
+		*vertices++ = internalPosX + glyphWidthScaled;
+		*vertices++ = internalPosY;
+		*vertices++ = (texLeft + texWidth);
+		*vertices++ = texTop;
+	}
+
 	glm::mat4 projection = glm::ortho(0.0f, winWidth, 0.0f, winHeight);
 
 	GLuint projLoc = glGetUniformLocation(fontShaderId, "projection");
@@ -217,22 +289,22 @@ internal void DrawString(RenderStringData *data)
 	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
 	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
 
-	float scale = (float)data->SizeInPx / sdfFontData.LineHeight;
+	
 	float smoothed;
-	if(scale < 1)
+	if (scale < 1)
 	{
-		smoothed = 0.1;
+		smoothed = 0.1f;
 	}
 	else
 	{
-		smoothed = 0.05;
+		smoothed = 0.05f;
 	}
+
 	GLuint smoothedLoc = glGetUniformLocation(fontShaderId, "smoothed");
 	glUniform1f(smoothedLoc, smoothed);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texId);
-
 
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
@@ -240,85 +312,29 @@ internal void DrawString(RenderStringData *data)
 
 	glUseProgram(fontShaderId);
 
-	float posX = (float)data->X;
-	float posY = winHeight - data->Y;
+	glGenVertexArrays(1, &quadVAO);
+	glBindVertexArray(quadVAO);
 
-	char* text = &data->Text[0];
-	while (*text)
-	{
-		char toPrint = *text++;
-		if (toPrint >= 0 && toPrint <= 255)
-		{
-			if(!sdfGlyphData[toPrint].IsValid)
-				continue;
+	glGenBuffers(1, &quadVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
 
-			float glyphHeightScaled = sdfGlyphData[toPrint].Height * scale;
-			float glyphWidthScaled = sdfGlyphData[toPrint].Width * scale;
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * verticeCount * 4, firstVertice, GL_STATIC_DRAW);
 
-			float texLeft = (float)sdfGlyphData[toPrint].TexX;
-			float texTop = (float)sdfGlyphData[toPrint].TexY;
-			float texWidth = sdfGlyphData[toPrint].TexWidth;
-			float texHeight = sdfGlyphData[toPrint].TexHeight;
-
-			float internalPosX = posX + (sdfGlyphData[toPrint].XOffset * scale);
-			float internalPosY = posY - (sdfGlyphData[toPrint].YOffset * scale);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid *)0);
+	glEnableVertexAttribArray(0);
 
 
-			float vertices[] = { 
-				// Top Left
-				internalPosX,
-				internalPosY,
-				texLeft,
-				texTop,
+	glDrawArrays(GL_TRIANGLES, 0, verticeCount);
+	glBindVertexArray(0);
 
-				// Bottom Left
-				internalPosX,
-				internalPosY - glyphHeightScaled,
-				texLeft,
-				texTop + texHeight,
-
-				// Bottom Right
-				internalPosX + glyphWidthScaled,
-				internalPosY - glyphHeightScaled,
-				(texLeft + texWidth), 
-				(texTop + texHeight),
-
-				// Top Left
-				internalPosX,
-				internalPosY,
-				texLeft,
-				texTop,
-
-				// Bottom Right
-				internalPosX + glyphWidthScaled,
-				internalPosY - glyphHeightScaled,
-				(texLeft + texWidth),
-				(texTop + texHeight),
-
-				// Top Right
-				internalPosX + glyphWidthScaled,
-				internalPosY,
-				(texLeft + texWidth),
-				texTop
-			};
-
-			posX += sdfGlyphData[toPrint].XAdvance * scale;
-			glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-			glBindVertexArray(quadVAO);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-			glBindVertexArray(0);
-		}
-	}
+	glDeleteVertexArrays(1, &quadVAO);
+	glDeleteBuffers(1, &quadVBO);
 
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
+
+	free(firstVertice);
 }
-
-
-
 
 internal void FreeFont()
 {

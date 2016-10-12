@@ -58,8 +58,6 @@ struct RenderCommandGroup
 	uint32 BufferSize;
 	uint8 *BufferBase;
 	uint8 *BufferDataAt;
-
-	glm::vec4 ClearColor;
 };
 #define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
 {Width, Height, MaxPushBufferSize, (uint8 *)PushBuffer, ((uint8 *)PushBuffer) + MaxPushBufferSize};

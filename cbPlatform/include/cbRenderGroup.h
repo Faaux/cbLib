@@ -12,8 +12,9 @@ struct RenderCommandHeader
 
 struct RenderStringData
 {
-	uint32 SizeInPx;
+	uint32 Size;
 	uint32 X, Y;
+	uint32 CurrentLength;
 	char Text[256];
 };
 
@@ -31,20 +32,23 @@ inline void* PushRenderElement_(RenderCommandGroup* renderGroup, uint32 dataSize
 	return (uint8 *)header + sizeof(*header);
 }
 
-inline void PushRenderString(RenderCommandGroup* renderGroup, uint32 fontSize, uint32 x, uint32 y, uint32 textLength, char* text)
+inline void PushRenderString(RenderCommandGroup* renderGroup, uint32 fontSize, uint32 x, uint32 y, char* text)
 {
 	RenderStringData* data = PushRenderElement(renderGroup, RenderStringData);
 	
-	data->SizeInPx = fontSize;
+	data->Size = fontSize;
 	data->X = x;
 	data->Y = y;
 	
 	ZeroArray(ArrayCount(data->Text), &data->Text[0]);
 
 	char *target = &data->Text[0];
+	int length = 0;
 	// Copy Text
 	while(*text)
 	{
 		*(target++) = *(text++);
+		++length;
 	}
+	data->CurrentLength = length;
 }
