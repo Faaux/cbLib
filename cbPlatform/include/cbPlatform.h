@@ -53,10 +53,31 @@ struct GameMemory
 	void *TransientStorage;
 
 	Win32PlatformCode Platform;
+
+	bool DLLHotSwapped;
+};
+
+struct GameMouseInput
+{
+	uint32 X, Y;
+	bool MouseButtons[3];
+};
+
+struct GameKeyboardInput
+{
+	
+};
+
+struct GameInput
+{
+	GameMouseInput NewMouseInputState;
+	GameMouseInput OldMouseInputState;
+	GameKeyboardInput OldKeyboardInput;
+	GameKeyboardInput NewKeyboardInput;
 };
 
 
-#define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory)
+#define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory, GameInput* input)
 typedef GAME_LOOP(game_loop);
 inline GAME_LOOP(GameLoopStub)
 {

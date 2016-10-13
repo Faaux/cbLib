@@ -1,5 +1,6 @@
 #define WIN32_LEAN_AND_MEAN
 #include "windows.h"
+#include "Windowsx.h"
 
 #include <GL/glew.h>
 #include <GL/wglew.h>
@@ -188,7 +189,7 @@ internal void Win32InitWindowAndOpenGL()
     UpdateWindow(_hWindow);
 }
 
-internal float Win32UpdatePlatform()
+internal float Win32UpdatePlatform(GameInput *input)
 {
     MSG Message;
     while (PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
@@ -208,6 +209,29 @@ internal float Win32UpdatePlatform()
         _windowWasResized = false;
     }
 
+	input->OldMouseInputState = input->NewMouseInputState;
+	input->OldKeyboardInput = input->NewKeyboardInput;
+
+	DWORD mouseButtonIds[3] =
+	{
+		VK_LBUTTON,
+		VK_MBUTTON,
+		VK_RBUTTON
+	};
+
+	POINT mousePos;
+	GetCursorPos(&mousePos);
+	ScreenToClient(_hWindow, &mousePos);
+
+	input->NewMouseInputState.X = mousePos.x;
+	input->NewMouseInputState.Y = mousePos.y;
+
+	for (uint32 ButtonIndex = 0; ButtonIndex < ArrayCount(mouseButtonIds); ++ButtonIndex)
+	{
+		input->NewMouseInputState.MouseButtons[ButtonIndex] = GetKeyState(mouseButtonIds[ButtonIndex]) & (1 << 15) ? true : false;		
+	}
+	
+
     LARGE_INTEGER endCounter;
     QueryPerformanceCounter(&endCounter);
 
@@ -217,6 +241,12 @@ internal float Win32UpdatePlatform()
 
     _lastCounter = endCounter;
 
+	static bool isFirst = false;
+	if(!isFirst)
+	{
+		isFirst = true;
+		_deltaTime = 1.f / 60.f;
+	}
     return _deltaTime;
 }
 
@@ -416,7 +446,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	glClearColor(0.2f, 0.4f, 0.3f, 1.0f);
 
     Win32GameCode gameCode = Win32LoadGameCode();
-
+	GameInput gameInput;
+	gameState.DLLHotSwapped = true;
     while (!_isCloseRequested)
     {
         FILETIME lastWriteTime = GetLastWriteTime("cbGame.dll");
@@ -424,23 +455,22 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         {
             Win32UnloadGameCode(&gameCode);
             gameCode = Win32LoadGameCode();
+			gameState.DLLHotSwapped = true;
         }
         if (!gameCode.IsValid)
             continue;
 
-        float deltaTime = Win32UpdatePlatform();
-
-		char deltaString[256];
-		sprintf_s(deltaString, 256, "%f\n", deltaTime * 1000.0f);
-		OutputDebugStringA(deltaString);
+        float deltaTime = Win32UpdatePlatform(&gameInput);
 
         // Early exit
         if (_isCloseRequested)
             continue;
 		
-        gameCode.GameLoop(deltaTime, &gameState);
+        gameCode.GameLoop(deltaTime, &gameState, &gameInput);
 		
 		Win32SwapBuffer();
+
+		gameState.DLLHotSwapped = false;
     }
     return 0;
 }
