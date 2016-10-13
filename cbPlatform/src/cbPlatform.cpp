@@ -7,13 +7,9 @@
 #include <cbGame.h>
 #include <cbInclude.h>
 #include <cbPlatform.h>
-#include <cbRenderGroup.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
-
-#include "cbFont.cpp"
-
 
 #ifdef UNICODE
 typedef LPWSTR LPTSTR;
@@ -229,6 +225,35 @@ SWAP_BUFFER(Win32SwapBuffer)
     SwapBuffers(_deviceContext);
 }
 
+READ_TEXT_FILE(Win32ReadTextFile)
+{
+	FILE *f;
+	errno_t err = fopen_s(&f, path, "rb");
+	if (err != 0)
+	{
+		return nullptr;
+	}
+	// Go to end
+	fseek(f, 0, SEEK_END);
+
+	// Read file size
+	size = ftell(f);
+
+	// Readwind to start
+	rewind(f);
+
+	// Read memory
+	void *memory = malloc(size + 1);
+	fread(memory, size, 1, f);
+
+	*((char *)memory + size) = 0;
+	++size;
+
+	// close stream
+	fclose(f);
+	return memory;
+}
+
 READ_FILE(Win32ReadFile)
 {
     FILE *f;
@@ -373,6 +398,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 	Win32PlatformCode platformCode;
 	platformCode.SwapBuffer = &Win32SwapBuffer;
+	platformCode.cbReadTextFile = &Win32ReadTextFile;
 	platformCode.cbReadFile = &Win32ReadFile;
 	platformCode.cbFreeFile = &Win32FreeFile;
 	platformCode.cbFreeImage = &Win32FreeImage;
@@ -386,10 +412,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	gameState.TransientStorageSize = transSize;
 	gameState.TransientStorage = transientMem;
 	gameState.Platform = platformCode;
-
-	uint32 renderCommandSize = Megabytes(4);
-	void* renderCommandBase = VirtualAlloc(0, renderCommandSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-
+	
 	glClearColor(0.2f, 0.4f, 0.3f, 1.0f);
 
     Win32GameCode gameCode = Win32LoadGameCode();
@@ -407,48 +430,17 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         float deltaTime = Win32UpdatePlatform();
 
+		char deltaString[256];
+		sprintf_s(deltaString, 256, "%f\n", deltaTime * 1000.0f);
+		OutputDebugStringA(deltaString);
+
         // Early exit
         if (_isCloseRequested)
             continue;
-
-		RenderCommandGroup commands = RenderCommandStruct(renderCommandSize, renderCommandBase, GetWindowWidth(), GetWindowHeight());
-
-        gameCode.GameLoop(deltaTime, &gameState, &commands);
-
-		// Render here
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// Render console
-		GameState* ingameState = (GameState*)gameState.PermanentStorage;
-		if (ingameState->Console->IsVisible)
-			RenderConsole(&commands, ingameState->Console);
-
-		uint8 * cmdPtr = (uint8*)commands.BufferDataAt;
-		while(cmdPtr < commands.BufferBase + commands.BufferSize)
-		{
-			RenderCommandHeader* command = (RenderCommandHeader*)cmdPtr;
-			uint32 offset = sizeof(RenderCommandHeader);
-			switch (command->Action)
-			{
-			case RenderActionType_RenderStringData:
-			{
-				RenderStringData *data = (RenderStringData *)((uint8 *)command + sizeof(*command));
-				DrawString(data);
-
-				offset += sizeof(RenderStringData);
-				break;
-			}
-			default: 
-				Assert(false);
-				break;
-			}
-
-			cmdPtr += offset;
-		}		
-		Win32SwapBuffer();
-
 		
-		// Work down the render queue
+        gameCode.GameLoop(deltaTime, &gameState);
+		
+		Win32SwapBuffer();
     }
     return 0;
 }

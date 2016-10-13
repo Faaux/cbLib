@@ -1,9 +1,7 @@
-#include <cstdio>
-
 #include <GL/glew.h>
 #include <GLM.h>
 #include <cbInclude.h>
-#include <cbPlatform.h>
+#include <cbGame.h>
 #include <cbRenderGroup.h>
 
 struct SDFFontData
@@ -51,14 +49,14 @@ static const char *basicFontFragmentShader = "#version 330 core\n"
 
                                              "uniform sampler2D text;\n"
                                              "uniform vec3 textColor;\n"
-											 "uniform float smoothed;\n"
 
                                              "const float solid = 0.5;\n"
 
                                              "void main()\n"
                                              "{\n"
                                              "	float distance = texture2D(text, TexCoords).a;\n"
-                                             "	float alpha = smoothstep(solid - smoothed, solid + smoothed, distance);\n"
+                                             "	float width = fwidth(distance);\n"
+                                             "	float alpha = smoothstep(solid - width, solid + width, distance);\n"
                                              "	color = vec4(textColor, alpha);\n"
                                              "};\n";
 
@@ -131,7 +129,7 @@ internal void InitShader()
 internal void InitTexture(char *fileName)
 {
     int width, height;
-    uint8 *atlas = Win32LoadImage(fileName, width, height);
+    uint8 *atlas = Platform.cbLoadImage(fileName, width, height);
 
     glGenTextures(1, &texId);
     glBindTexture(GL_TEXTURE_2D, texId);
@@ -141,7 +139,7 @@ internal void InitTexture(char *fileName)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glGenerateMipmap(GL_TEXTURE_2D);
 
-    Win32FreeImage(atlas);
+	Platform.cbFreeImage(atlas);
 }
 
 internal void LoadSDFMetaData()
@@ -212,8 +210,8 @@ internal void DrawString(RenderStringData *data)
 		InitSDF();
 	}
 
-	float winWidth = (float)GetWindowWidth();
-	float winHeight = (float)GetWindowHeight();
+	float winWidth = (float)Platform.GetWindowWidth();
+	float winHeight = (float)Platform.GetWindowHeight();
 
 	float scale = (float)data->Size / (float)sdfFontData.Size;
 
@@ -283,25 +281,14 @@ internal void DrawString(RenderStringData *data)
 
 	glm::mat4 projection = glm::ortho(0.0f, winWidth, 0.0f, winHeight);
 
+	glUseProgram(fontShaderId);
+
 	GLuint projLoc = glGetUniformLocation(fontShaderId, "projection");
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 
 	GLuint colorLoc = glGetUniformLocation(fontShaderId, "textColor");
 	glUniform3f(colorLoc, 0.f, 0.f, 0.f);
 
-	
-	float smoothed;
-	if (scale < 1)
-	{
-		smoothed = 0.1f;
-	}
-	else
-	{
-		smoothed = 0.05f;
-	}
-
-	GLuint smoothedLoc = glGetUniformLocation(fontShaderId, "smoothed");
-	glUniform1f(smoothedLoc, smoothed);
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, texId);
@@ -309,8 +296,6 @@ internal void DrawString(RenderStringData *data)
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	glUseProgram(fontShaderId);
 
 	glGenVertexArrays(1, &quadVAO);
 	glBindVertexArray(quadVAO);

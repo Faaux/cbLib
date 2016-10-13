@@ -1,5 +1,18 @@
 #pragma once
 #include <cbMemory.h>
+
+struct RenderCommandGroup
+{
+	uint32 Width, Height;
+
+	mem_size BufferSize;
+	uint8 *BufferBase;
+	uint8 *BufferDataAt;
+};
+
+#define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
+{Width, Height, MaxPushBufferSize, (uint8 *)PushBuffer, ((uint8 *)PushBuffer) + MaxPushBufferSize};
+
 enum RenderActionType
 {
 	RenderActionType_RenderStringData

@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdio>
-#include <cbMemory.h>
+#include <cbInclude.h>
 
 inline char* cbItoA(int i, char b[], mem_size size) {
 	int count = sprintf_s(b, size,"%d", i);

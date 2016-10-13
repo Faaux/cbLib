@@ -1,12 +1,9 @@
 #pragma once
-
-// ToDo: Make this whole thing Thread Safe
 #include <cbInclude.h>
-#include <cstring>
 
 struct cbArena
 {
-	uint8 *Start;
+	uint8 *Base;
 	mem_size Size;
 	mem_size Used;
 };
@@ -24,7 +21,7 @@ inline void ZeroSize(mem_size size, void *ptr)
 
 inline void InitArena(cbArena *mem, mem_size size, void* ptr)
 {
-	mem->Start = (uint8*)ptr;
+	mem->Base = (uint8*)ptr;
 	mem->Size = size;
 	mem->Used = 0;
 }
@@ -59,7 +56,7 @@ inline mem_size GetAlignmentSize(cbArena* mem, uint32 alignment)
 {
 	mem_size result = 0;
 
-	mem_size resultPointer = (mem_size)mem->Start + mem->Used;
+	mem_size resultPointer = (mem_size)mem->Base + mem->Used;
 	mem_size alignmentMask = alignment - 1;
 
 	if(resultPointer & alignmentMask)
@@ -77,7 +74,7 @@ inline void *PushSize_(cbArena *mem, mem_size size, ArenaPushParams params = Get
 
 	Assert(mem->Used + sizeWithAlignment <= mem->Size);
 
-	void* result = mem->Start + mem->Used + alignmentSize;
+	void* result = mem->Base + mem->Used + alignmentSize;
 	mem->Used += sizeWithAlignment;
 
 	Assert(sizeWithAlignment >= size);
@@ -91,13 +88,13 @@ inline void *PushSize_(cbArena *mem, mem_size size, ArenaPushParams params = Get
 
 inline void Clear(cbArena* mem)
 {
-	InitArena(mem, mem->Size, mem->Start);
+	InitArena(mem, mem->Size, mem->Base);
 }
 
 inline void SubArena(cbArena *result, cbArena *arena, mem_size size, ArenaPushParams Params = GetDefaultArenaParams())
 {
 	result->Size = size;
-	result->Start = (uint8 *)PushSize_(arena, size, Params);
+	result->Base = (uint8 *)PushSize_(arena, size, Params);
 	result->Used = 0;
 }
 

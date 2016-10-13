@@ -14,3 +14,10 @@ struct GameState
 
 	cbConsole* Console;
 };
+
+struct TransientStorage
+{
+	bool IsInitialized;
+	mem_size RenderGroupSize;
+	cbArena RenderGroupArena;
+};

@@ -1,6 +1,5 @@
 #pragma once
 #include <cbInclude.h>
-#include <cbPlatform.h>
 #include <cbRenderGroup.h>
 
 struct cbConsoleEntry

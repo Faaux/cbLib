@@ -1,6 +1,5 @@
 #pragma once
 #include <cbInclude.h>
-#include <GLM.h>
 
 #define FREE_IMAGE(name) void name(unsigned char *image)
 typedef FREE_IMAGE(win32_free_image);
@@ -9,6 +8,10 @@ FREE_IMAGE(Win32FreeImage);
 #define LOAD_IMAGE(name) unsigned char *name(const char *path, int &width, int &height)
 typedef LOAD_IMAGE(win32_load_image);
 LOAD_IMAGE(Win32LoadImage);
+
+#define READ_TEXT_FILE(name) void *name(const char *path, long &size)
+typedef READ_TEXT_FILE(win32_read_text_file);
+READ_TEXT_FILE(Win32ReadTextFile);
 
 #define READ_FILE(name) void *name(const char *path, long &size)
 typedef READ_FILE(win32_read_file);
@@ -32,6 +35,7 @@ GET_WIN_SIZE(GetWindowHeight);
 struct Win32PlatformCode
 {
 	win32_swap_buffer *SwapBuffer;
+	win32_read_text_file *cbReadTextFile;
 	win32_read_file *cbReadFile;
 	win32_free_file *cbFreeFile;
 	win32_load_image *cbLoadImage;
@@ -51,19 +55,8 @@ struct GameMemory
 	Win32PlatformCode Platform;
 };
 
-struct RenderCommandGroup
-{
-	uint32 Width, Height;
 
-	uint32 BufferSize;
-	uint8 *BufferBase;
-	uint8 *BufferDataAt;
-};
-#define RenderCommandStruct(MaxPushBufferSize, PushBuffer, Width, Height) \
-{Width, Height, MaxPushBufferSize, (uint8 *)PushBuffer, ((uint8 *)PushBuffer) + MaxPushBufferSize};
-
-
-#define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory, RenderCommandGroup *renderCommands)
+#define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory)
 typedef GAME_LOOP(game_loop);
 inline GAME_LOOP(GameLoopStub)
 {
