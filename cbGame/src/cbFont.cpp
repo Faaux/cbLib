@@ -3,6 +3,7 @@
 #include <cbInclude.h>
 #include <cbGame.h>
 #include <cbRenderGroup.h>
+#include <cstdio>
 
 struct SDFFontData
 {

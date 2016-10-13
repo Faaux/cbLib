@@ -37,12 +37,31 @@ internal uint32 _windowWidth = 1280;
 internal uint32 _windowHeight = 720;
 internal bool _isCloseRequested;
 
+internal GameInput _gameInput;
+
+
+internal void UpdateKeyState(uint32 vkCode, bool isDown)
+{
+	_gameInput.NewKeyboardInput.Keys[vkCode].IsDown = isDown;		
+}
+
+internal void UpdateInputText(char c)
+{
+	Assert(_gameInput.NewKeyboardInput.CurrentLength < 31);
+	_gameInput.NewKeyboardInput.InputText[_gameInput.NewKeyboardInput.CurrentLength++] = c;
+}
 internal LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT Result = 0;
 
     switch (message)
     {
+	case WM_CHAR:
+	{
+		char c = (char)wParam;
+		UpdateInputText(c);
+		break;
+	}
     case WM_SIZE:
         _windowWidth = LOWORD(lParam);
         _windowHeight = HIWORD(lParam);
@@ -52,6 +71,27 @@ internal LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
     case WM_QUIT:
         _isCloseRequested = true;
         break;
+	case WM_MOUSEWHEEL:
+		_gameInput.NewMouseInputState.WheelSteps = (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		break;
+	case WM_SYSKEYDOWN:
+	case WM_SYSKEYUP:
+	case WM_KEYDOWN:
+	case WM_KEYUP:
+	{
+		uint32 VKCode = (uint32)wParam;
+		//bool WasDown = ((lParam & (1 << 30)) != 0);
+		bool IsDown = ((lParam & (1 << 31)) == 0);
+		UpdateKeyState(VKCode, IsDown);
+
+		bool AltKeyWasDown = (lParam & (1 << 29)) ? true : false;
+		if (VKCode == VK_F4 && AltKeyWasDown)
+		{
+			_isCloseRequested = true;
+		}
+		break;
+	}
+	
     default:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
@@ -191,6 +231,34 @@ internal void Win32InitWindowAndOpenGL()
 
 internal float Win32UpdatePlatform(GameInput *input)
 {
+	input->OldMouseInputState = input->NewMouseInputState;
+	input->OldKeyboardInput = input->NewKeyboardInput;
+	input->NewKeyboardInput.CurrentLength = 0;
+	input->NewMouseInputState.WheelSteps = 0.f;
+	DWORD mouseButtonIds[3] =
+	{
+		VK_LBUTTON,
+		VK_RBUTTON,
+		VK_MBUTTON
+
+	};
+
+	POINT mousePos;
+	GetCursorPos(&mousePos);
+	ScreenToClient(_hWindow, &mousePos);
+
+	input->NewMouseInputState.X = mousePos.x;
+	input->NewMouseInputState.Y = mousePos.y;
+
+	for (uint32 ButtonIndex = 0; ButtonIndex < ArrayCount(mouseButtonIds); ++ButtonIndex)
+	{
+		input->NewMouseInputState.MouseButtons[ButtonIndex] = GetKeyState(mouseButtonIds[ButtonIndex]) & (1 << 15) ? true : false;
+	}
+
+	input->ShiftDown = (GetKeyState(VK_SHIFT) & (1 << 15)) ? true : false;
+	input->AltDown = (GetKeyState(VK_MENU) & (1 << 15)) ? true : false;
+	input->ControlDown = (GetKeyState(VK_CONTROL) & (1 << 15)) ? true : false;
+
     MSG Message;
     while (PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
     {
@@ -208,29 +276,6 @@ internal float Win32UpdatePlatform(GameInput *input)
         glViewport(0, 0, _windowWidth, _windowHeight);
         _windowWasResized = false;
     }
-
-	input->OldMouseInputState = input->NewMouseInputState;
-	input->OldKeyboardInput = input->NewKeyboardInput;
-
-	DWORD mouseButtonIds[3] =
-	{
-		VK_LBUTTON,
-		VK_MBUTTON,
-		VK_RBUTTON
-	};
-
-	POINT mousePos;
-	GetCursorPos(&mousePos);
-	ScreenToClient(_hWindow, &mousePos);
-
-	input->NewMouseInputState.X = mousePos.x;
-	input->NewMouseInputState.Y = mousePos.y;
-
-	for (uint32 ButtonIndex = 0; ButtonIndex < ArrayCount(mouseButtonIds); ++ButtonIndex)
-	{
-		input->NewMouseInputState.MouseButtons[ButtonIndex] = GetKeyState(mouseButtonIds[ButtonIndex]) & (1 << 15) ? true : false;		
-	}
-	
 
     LARGE_INTEGER endCounter;
     QueryPerformanceCounter(&endCounter);
@@ -253,6 +298,31 @@ internal float Win32UpdatePlatform(GameInput *input)
 SWAP_BUFFER(Win32SwapBuffer)
 {
     SwapBuffers(_deviceContext);
+}
+
+SET_CLIPBOARD_TEXT(Win32SetClipboardText)
+{
+	const size_t len = strlen(text) + 1;
+	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len);
+	memcpy(GlobalLock(hMem), text, len);
+	GlobalUnlock(hMem);
+	OpenClipboard(0);
+	EmptyClipboard();
+	SetClipboardData(CF_TEXT, hMem);
+	CloseClipboard();
+}
+
+GET_CLIPBOARD_TEXT(Win32GetClipboardText)
+{
+	for (;;)
+		if (OpenClipboard(0))
+			break;
+
+	HANDLE hData = GetClipboardData(CF_TEXT);
+	char *text= (char*)(GlobalLock(hData));
+	GlobalUnlock(hData);
+	CloseClipboard();
+	return text;
 }
 
 READ_TEXT_FILE(Win32ReadTextFile)
@@ -427,6 +497,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
 	Win32PlatformCode platformCode;
+	platformCode.SetClipboardText = &Win32SetClipboardText;
+	platformCode.GetClipboardText = &Win32GetClipboardText;
 	platformCode.SwapBuffer = &Win32SwapBuffer;
 	platformCode.cbReadTextFile = &Win32ReadTextFile;
 	platformCode.cbReadFile = &Win32ReadFile;
@@ -446,7 +518,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	glClearColor(0.2f, 0.4f, 0.3f, 1.0f);
 
     Win32GameCode gameCode = Win32LoadGameCode();
-	GameInput gameInput;
+
 	gameState.DLLHotSwapped = true;
     while (!_isCloseRequested)
     {
@@ -460,13 +532,13 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         if (!gameCode.IsValid)
             continue;
 
-        float deltaTime = Win32UpdatePlatform(&gameInput);
+        float deltaTime = Win32UpdatePlatform(&_gameInput);
 
         // Early exit
         if (_isCloseRequested)
             continue;
 		
-        gameCode.GameLoop(deltaTime, &gameState, &gameInput);
+        gameCode.GameLoop(deltaTime, &gameState, &_gameInput);
 		
 		Win32SwapBuffer();
 

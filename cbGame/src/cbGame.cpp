@@ -1,6 +1,6 @@
 #include <cbGame.h>
 #include <cbInclude.h>
-#include <cbBasic.h>
+#include <cbKeys.h>
 #include <cbRenderGroup.h>
 #include <GL/glew.h>
 
@@ -9,6 +9,7 @@ Win32PlatformCode Platform;
 #include "cbFont.cpp"
 #include "imgui.cpp"
 #include "imgui_draw.cpp"
+#include "imgui_demo.cpp"
 
 static GLuint bgShaderId;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
@@ -236,7 +237,7 @@ internal void Render(float deltaTime, GameState* gameState, RenderCommandGroup* 
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 
 	static float accum = 0, f = 8.f;
-	ImGui::SliderFloat("Background Speed", &f, 0.0f, 100.0f);
+	//ImGui::SliderFloat("Background Speed", &f, 0.0f, 100.0f);
 	accum += deltaTime * f;
 	
 	static GLuint resLoc = glGetUniformLocation(bgShaderId, "resolution");
@@ -264,6 +265,32 @@ internal void Update()
 internal void InitImGui()
 {
 	ImGuiIO& io = ImGui::GetIO();
+
+	// Set Key Mapping
+	io.KeyMap[ImGuiKey_Tab] = cbKey_TAB;
+	io.KeyMap[ImGuiKey_LeftArrow] = cbKey_LEFTARROW;
+	io.KeyMap[ImGuiKey_RightArrow] = cbKey_RIGHTARROW;
+	io.KeyMap[ImGuiKey_UpArrow] = cbKey_UPARROW;
+	io.KeyMap[ImGuiKey_DownArrow] = cbKey_DOWNARROW;
+	io.KeyMap[ImGuiKey_PageUp] = cbKey_PAGEUP;
+	io.KeyMap[ImGuiKey_PageDown] = cbKey_PAGEDOWN;
+	io.KeyMap[ImGuiKey_Home] = cbKey_HOME;
+	io.KeyMap[ImGuiKey_End] = cbKey_END;
+	io.KeyMap[ImGuiKey_Delete] = cbKey_DELETE;
+	io.KeyMap[ImGuiKey_Backspace] = cbKey_BACKSPACE;
+	io.KeyMap[ImGuiKey_Enter] = cbKey_ENTER;
+	io.KeyMap[ImGuiKey_Escape] = cbKey_ESCAPE;
+	io.KeyMap[ImGuiKey_A] = cbKey_A;
+	io.KeyMap[ImGuiKey_C] = cbKey_C;
+	io.KeyMap[ImGuiKey_V] = cbKey_V;
+	io.KeyMap[ImGuiKey_X] = cbKey_X;
+	io.KeyMap[ImGuiKey_Y] = cbKey_Y;
+	io.KeyMap[ImGuiKey_Z] = cbKey_Z;
+
+	io.RenderDrawListsFn = ImGuiRender;
+	io.SetClipboardTextFn = Platform.SetClipboardText;
+	io.GetClipboardTextFn = Platform.GetClipboardText;
+
 
 	// Backup GL state
 	GLint last_texture, last_array_buffer, last_vertex_array;
@@ -331,7 +358,7 @@ internal void InitImGui()
 #undef OFFSETOF
 
 
-	io.RenderDrawListsFn = ImGuiRender;
+	
 	unsigned char* pixels;
 	int width, height;
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
@@ -397,12 +424,29 @@ EXPORT GAME_LOOP(GameLoop)
 	io.MouseDown[1] = input->NewMouseInputState.MouseButtons[1];
 	io.MouseDown[2] = input->NewMouseInputState.MouseButtons[2];
 
+	io.KeyCtrl = input->ControlDown;
+	io.KeyShift = input->ShiftDown;
+	io.KeyAlt = input->AltDown;
+
+	io.MouseWheel = input->NewMouseInputState.WheelSteps;
+
+	for (uint32 i = 0; i < ArrayCount(input->NewKeyboardInput.Keys); i++)
+	{
+		io.KeysDown[i] = input->NewKeyboardInput.Keys[i].IsDown;
+	}
+
+	for (uint32 i = 0; i < input->NewKeyboardInput.CurrentLength; i++)
+	{
+		io.AddInputCharacter(input->NewKeyboardInput.InputText[i]);
+	}
+	
+
 	ImGui::NewFrame();
 
     Update();
-
-	ImGui::Text("Hello, world!");	
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	ImGui::ShowTestWindow();
+	//ImGui::Text("Hello, world!");	
+	//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 	RenderCommandGroup renderCommands = RenderCommandStruct(transStorage->RenderGroupSize, transStorage->RenderGroupArena.Base, Platform.GetWindowWidth(), Platform.GetWindowHeight());
     Render(deltaTime, gameState, &renderCommands);

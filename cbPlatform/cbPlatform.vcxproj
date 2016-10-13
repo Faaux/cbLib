@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClInclude Include="include\cbBasic.h" />
     <ClInclude Include="include\cbInclude.h" />
+    <ClInclude Include="include\cbKeys.h" />
     <ClInclude Include="include\cbMemory.h" />
     <ClInclude Include="include\cbPlatform.h" />
   </ItemGroup>

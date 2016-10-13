@@ -1,6 +1,14 @@
 #pragma once
 #include <cbInclude.h>
 
+#define SET_CLIPBOARD_TEXT(name) void name(const char* text)
+typedef SET_CLIPBOARD_TEXT(win32_set_clipboard_text);
+SET_CLIPBOARD_TEXT(Win32SetClipboardText);
+
+#define GET_CLIPBOARD_TEXT(name) const char* name()
+typedef GET_CLIPBOARD_TEXT(win32_get_clipboard_text);
+GET_CLIPBOARD_TEXT(Win32GetClipboardText);
+
 #define FREE_IMAGE(name) void name(unsigned char *image)
 typedef FREE_IMAGE(win32_free_image);
 FREE_IMAGE(Win32FreeImage);
@@ -34,6 +42,8 @@ GET_WIN_SIZE(GetWindowHeight);
 
 struct Win32PlatformCode
 {
+	win32_set_clipboard_text *SetClipboardText;
+	win32_get_clipboard_text *GetClipboardText;
 	win32_swap_buffer *SwapBuffer;
 	win32_read_text_file *cbReadTextFile;
 	win32_read_file *cbReadFile;
@@ -60,12 +70,21 @@ struct GameMemory
 struct GameMouseInput
 {
 	uint32 X, Y;
+	float WheelSteps;
 	bool MouseButtons[3];
+	
+};
+
+struct Key
+{
+	bool IsDown;
 };
 
 struct GameKeyboardInput
 {
-	
+	Key Keys[256];
+	uint32 CurrentLength;
+	char InputText[32];
 };
 
 struct GameInput
@@ -74,6 +93,10 @@ struct GameInput
 	GameMouseInput OldMouseInputState;
 	GameKeyboardInput OldKeyboardInput;
 	GameKeyboardInput NewKeyboardInput;
+
+	bool ShiftDown;
+	bool AltDown;
+	bool ControlDown;
 };
 
 
