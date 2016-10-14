@@ -2,6 +2,12 @@
 #include <cstdio>
 #include <cbInclude.h>
 
+inline int cbStrCmp(const char* lhs, const char* rhs)
+{
+	while (*lhs && *rhs && *lhs == *rhs){ lhs++; rhs++; }
+	return *lhs - *rhs;
+}
+
 inline char* cbItoA(int i, char b[], mem_size size) {
 	int count = sprintf_s(b, size,"%d", i);
 	return b + count;

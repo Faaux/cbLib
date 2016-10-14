@@ -101,6 +101,7 @@
   <ItemGroup>
     <ClInclude Include="include\cbConsole.h" />
     <ClInclude Include="include\cbGame.h" />
+    <ClInclude Include="include\cbImgui.h" />
     <ClInclude Include="include\cbRenderGroup.h" />
     <ClInclude Include="include\GLM.h" />
     <ClInclude Include="src\imconfig.h" />
@@ -110,6 +111,7 @@
   <ItemGroup>
     <ClCompile Include="src\cbFont.cpp" />
     <ClCompile Include="src\cbGame.cpp" />
+    <ClCompile Include="src\cbImgui.cpp" />
     <ClCompile Include="src\imgui.cpp" />
     <ClCompile Include="src\imgui_demo.cpp" />
     <ClCompile Include="src\imgui_draw.cpp" />
