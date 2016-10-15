@@ -103,6 +103,7 @@
     <ClInclude Include="include\cbGame.h" />
     <ClInclude Include="include\cbImgui.h" />
     <ClInclude Include="include\cbRenderGroup.h" />
+    <ClInclude Include="include\cbShader.h" />
     <ClInclude Include="include\GLM.h" />
     <ClInclude Include="src\imconfig.h" />
     <ClInclude Include="src\imgui.h" />
@@ -119,6 +120,8 @@
   <ItemGroup>
     <None Include="shaders\font.f" />
     <None Include="shaders\font.v" />
+    <None Include="shader\imgui.f" />
+    <None Include="shader\imgui.v" />
     <None Include="shader\noise.f" />
     <None Include="shader\noise.v" />
   </ItemGroup>

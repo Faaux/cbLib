@@ -27,6 +27,11 @@ del lock.tmp
 cl %CommonCompilerFlags% %IncludeFolders% ..\cbPlatform\src\cbPlatform.cpp /link %CommonLinkerFlags% %CommonLinkerLibs%
 popd
 
+pushd bin
+IF NOT EXIST shaders mkdir shaders
+popd
+
+xcopy ".\cbGame\shader" ".\bin\shaders" /S /Y /q
 xcopy "ThirdParty\bin" ".\bin" /S /Y /q
 xcopy ".\res" ".\bin" /S /Y /q
 

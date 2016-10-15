@@ -4,7 +4,6 @@
 #include <cbMemory.h>
 #include <cbConsole.h>
 
-extern Win32PlatformCode Platform;
 
 struct GameState
 {
@@ -18,6 +17,10 @@ struct GameState
 struct TransientStorage
 {
 	bool IsInitialized;
-	mem_size RenderGroupSize;
 	cbArena RenderGroupArena;
+	cbArena ShaderArena;
 };
+
+
+extern Win32PlatformCode Platform;
+extern TransientStorage* TransStorage;

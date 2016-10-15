@@ -1,6 +1,20 @@
 #pragma once
 #include <cbInclude.h>
 
+struct cbFiletime
+{
+	uint32 LowPart;
+	uint32 HighPart;
+};
+
+#define COMPARE_FILE_TIME(name) int name(const cbFiletime lhs, const cbFiletime rhs)
+typedef COMPARE_FILE_TIME(win32_cmp_file_time);
+COMPARE_FILE_TIME(Win32CompareFileTime);
+
+#define GET_LAST_FILE_TIME(name) cbFiletime name(const char* file)
+typedef GET_LAST_FILE_TIME(win32_get_last_file_time);
+GET_LAST_FILE_TIME(Win32GetLastFileTime);
+
 #define SET_CLIPBOARD_TEXT(name) void name(const char* text)
 typedef SET_CLIPBOARD_TEXT(win32_set_clipboard_text);
 SET_CLIPBOARD_TEXT(Win32SetClipboardText);
@@ -42,6 +56,8 @@ GET_WIN_SIZE(GetWindowHeight);
 
 struct Win32PlatformCode
 {
+	win32_cmp_file_time *CompareFileTime;
+	win32_get_last_file_time *GetLastFileTime;
 	win32_set_clipboard_text *SetClipboardText;
 	win32_get_clipboard_text *GetClipboardText;
 	win32_swap_buffer *SwapBuffer;

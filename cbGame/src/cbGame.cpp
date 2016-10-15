@@ -5,6 +5,7 @@
 #include <GL/glew.h>
 
 Win32PlatformCode Platform;
+TransientStorage *TransStorage;
 
 #include "cbFont.cpp"
 #include "imgui.cpp"
@@ -183,19 +184,28 @@ EXPORT GAME_LOOP(GameLoop)
 	}
 
 	
-	TransientStorage* transStorage = (TransientStorage *)gameMemory->TransientStorage;
+	TransStorage = (TransientStorage *)gameMemory->TransientStorage;
 	if(gameMemory->DLLHotSwapped)
 	{
+		uint8* currentMemoryLocation = (uint8 *)gameMemory->TransientStorage + sizeof(TransientStorage);
+
 		cbArena transRenderArena;
-		
 		mem_size renderCommandSize = Megabytes(1);
-		InitArena(&transRenderArena, renderCommandSize, (uint8 *)gameMemory->TransientStorage + sizeof(TransientStorage));
-		transStorage->RenderGroupSize = renderCommandSize;
-		transStorage->RenderGroupArena = transRenderArena;
-		transStorage->IsInitialized = true;
-		PushSize(&transStorage->RenderGroupArena, renderCommandSize);
+		InitArena(&transRenderArena, renderCommandSize, currentMemoryLocation);
+		TransStorage->RenderGroupArena = transRenderArena;		
+		PushSize(&TransStorage->RenderGroupArena, renderCommandSize);
+
+		currentMemoryLocation += renderCommandSize;
+
+		cbArena shaderArena;
+		mem_size shaderArenaSize = Kilobytes(256);
+		InitArena(&shaderArena, shaderArenaSize, currentMemoryLocation);
+		TransStorage->ShaderArena = shaderArena;
+		currentMemoryLocation += shaderArenaSize;
 
 		InitImGui();
+
+		TransStorage->IsInitialized = true;
 	}
 	
 	
@@ -205,6 +215,6 @@ EXPORT GAME_LOOP(GameLoop)
 	//ImGui::Text("Hello, world!");	
 	//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-	RenderCommandGroup renderCommands = RenderCommandStruct(transStorage->RenderGroupSize, transStorage->RenderGroupArena.Base, Platform.GetWindowWidth(), Platform.GetWindowHeight());
+	RenderCommandGroup renderCommands = RenderCommandStruct(TransStorage->RenderGroupArena.Size, TransStorage->RenderGroupArena.Base, Platform.GetWindowWidth(), Platform.GetWindowHeight());
     Render(deltaTime, gameState, &renderCommands);
 }

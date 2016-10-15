@@ -296,9 +296,45 @@ internal float Win32UpdatePlatform(GameInput *input)
     return _deltaTime;
 }
 
+internal FILETIME GetLastWriteTime(const char *fileName)
+{
+	FILETIME result = {};
+
+	WIN32_FIND_DATAA findData;
+	HANDLE findHandle = FindFirstFileA(fileName, &findData);
+	if (findHandle != INVALID_HANDLE_VALUE)
+	{
+		result = findData.ftLastWriteTime;
+		FindClose(findHandle);
+	}
+
+	return result;
+}
+
 SWAP_BUFFER(Win32SwapBuffer)
 {
     SwapBuffers(_deviceContext);
+}
+
+COMPARE_FILE_TIME(Win32CompareFileTime)
+{
+	FILETIME lhsFT, rhsFT;
+	lhsFT.dwHighDateTime = lhs.HighPart;
+	lhsFT.dwLowDateTime = lhs.LowPart;
+	rhsFT.dwHighDateTime = rhs.HighPart;
+	rhsFT.dwLowDateTime = rhs.LowPart;
+
+	return CompareFileTime(&lhsFT, &rhsFT);
+}
+
+GET_LAST_FILE_TIME(Win32GetLastFileTime)
+{
+	cbFiletime result;
+	FILETIME ft = GetLastWriteTime(file);	
+
+	result.HighPart = ft.dwHighDateTime;
+	result.LowPart = ft.dwLowDateTime;
+	return result;
 }
 
 SET_CLIPBOARD_TEXT(Win32SetClipboardText)
@@ -408,21 +444,6 @@ GET_WIN_SIZE(GetWindowWidth)
     return _windowWidth;
 }
 
-internal FILETIME GetLastWriteTime(char *fileName)
-{
-    FILETIME result = {};
-
-    WIN32_FIND_DATAA findData;
-    HANDLE findHandle = FindFirstFileA(fileName, &findData);
-    if (findHandle != INVALID_HANDLE_VALUE)
-    {
-        result = findData.ftLastWriteTime;
-        FindClose(findHandle);
-    }
-
-    return result;
-}
-
 internal Win32GameCode Win32LoadGameCode()
 {
     Win32GameCode result = {};
@@ -498,6 +519,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
 	Win32PlatformCode platformCode;
+	platformCode.CompareFileTime = &Win32CompareFileTime;
+	platformCode.GetLastFileTime = &Win32GetLastFileTime;
 	platformCode.SetClipboardText = &Win32SetClipboardText;
 	platformCode.GetClipboardText = &Win32GetClipboardText;
 	platformCode.SwapBuffer = &Win32SwapBuffer;

@@ -24,7 +24,7 @@
 #if cbSlow
 #define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
 #else
-#define Assert(Expression)
+#define Assert(Expression) Expression
 #endif
 
 typedef uint32_t uint;

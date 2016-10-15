@@ -2,13 +2,12 @@
 #include "cbGame.h"
 #include "cbInclude.h"
 #include "cbKeys.h"
+#include "cbShader.h"
 
 #include <GL/glew.h>
 
 
-static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
-static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
-static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
+static cbShaderProgram *imguiShader;
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0, g_TextureId = 0;
 
 void ImGuiRender(ImDrawData* draw_data)
@@ -57,9 +56,9 @@ void ImGuiRender(ImDrawData* draw_data)
 		{ 0.0f,                  0.0f,                  -1.0f, 0.0f },
 		{ -1.0f,                  1.0f,                   0.0f, 1.0f },
 	};
-	glUseProgram(g_ShaderHandle);
-	glUniform1i(g_AttribLocationTex, 0);
-	glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
+	Assert(cbUseProgram(imguiShader));
+	glUniform1i(cbGetUniformLocation(imguiShader ,"Texture"), 0);
+	glUniformMatrix4fv(cbGetUniformLocation(imguiShader, "ProjMtx"), 1, GL_FALSE, &ortho_projection[0][0]);
 	glBindVertexArray(g_VaoHandle);
 
 	for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -143,48 +142,11 @@ void InitImGui()
 	glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
 	glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 
-	const GLchar *vertex_shader =
-		"#version 330\n"
-		"uniform mat4 ProjMtx;\n"
-		"in vec2 Position;\n"
-		"in vec2 UV;\n"
-		"in vec4 Color;\n"
-		"out vec2 Frag_UV;\n"
-		"out vec4 Frag_Color;\n"
-		"void main()\n"
-		"{\n"
-		"	Frag_UV = UV;\n"
-		"	Frag_Color = Color;\n"
-		"	gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-		"}\n";
+	imguiShader = cbCreateProgram("shaders/imgui.v", "shaders/imgui.f");
 
-	const GLchar* fragment_shader =
-		"#version 330\n"
-		"uniform sampler2D Texture;\n"
-		"in vec2 Frag_UV;\n"
-		"in vec4 Frag_Color;\n"
-		"out vec4 Out_Color;\n"
-		"void main()\n"
-		"{\n"
-		"	Out_Color = Frag_Color * texture( Texture, Frag_UV.st);\n"
-		"}\n";
-
-	g_ShaderHandle = glCreateProgram();
-	g_VertHandle = glCreateShader(GL_VERTEX_SHADER);
-	g_FragHandle = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(g_VertHandle, 1, &vertex_shader, 0);
-	glShaderSource(g_FragHandle, 1, &fragment_shader, 0);
-	glCompileShader(g_VertHandle);
-	glCompileShader(g_FragHandle);
-	glAttachShader(g_ShaderHandle, g_VertHandle);
-	glAttachShader(g_ShaderHandle, g_FragHandle);
-	glLinkProgram(g_ShaderHandle);
-
-	g_AttribLocationTex = glGetUniformLocation(g_ShaderHandle, "Texture");
-	g_AttribLocationProjMtx = glGetUniformLocation(g_ShaderHandle, "ProjMtx");
-	g_AttribLocationPosition = glGetAttribLocation(g_ShaderHandle, "Position");
-	g_AttribLocationUV = glGetAttribLocation(g_ShaderHandle, "UV");
-	g_AttribLocationColor = glGetAttribLocation(g_ShaderHandle, "Color");
+	int g_AttribLocationPosition = glGetAttribLocation(imguiShader->ShaderId, "Position");
+	int g_AttribLocationUV = glGetAttribLocation(imguiShader->ShaderId, "UV");
+	int g_AttribLocationColor = glGetAttribLocation(imguiShader->ShaderId, "Color");
 
 	glGenBuffers(1, &g_VboHandle);
 	glGenBuffers(1, &g_ElementsHandle);

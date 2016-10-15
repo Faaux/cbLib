@@ -2,6 +2,14 @@
 #include <cstdio>
 #include <cbInclude.h>
 
+inline void cbStrCopy(char* destination, const char* source)
+{
+	while(*source)
+	{
+		*destination++ = *source++;
+	}
+}
+
 inline int cbStrCmp(const char* lhs, const char* rhs)
 {
 	while (*lhs && *rhs && *lhs == *rhs){ lhs++; rhs++; }
