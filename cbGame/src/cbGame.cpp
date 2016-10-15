@@ -15,61 +15,6 @@ TransientStorage *TransStorage;
 
 static GLuint bgShaderId;
 
-internal void InitBackgroundShader()
-{
-	long size;
-	char * VertexSourcePointer = (char *)Platform.cbReadTextFile("..\\cbGame\\shader\\noise.v", size);
-	char * FragmentSourcePointer = (char *)Platform.cbReadTextFile("..\\cbGame\\shader\\noise.f", size);
-
-	GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
-
-	glShaderSource(vertexShaderId, 1, &VertexSourcePointer, NULL);
-	glCompileShader(vertexShaderId);
-
-	GLint result = GL_FALSE;
-	int infoLogLength;
-	char text[1024];
-	glGetShaderiv(vertexShaderId, GL_COMPILE_STATUS, &result);
-	glGetShaderiv(vertexShaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
-	{
-		glGetShaderInfoLog(vertexShaderId, infoLogLength, NULL, &text[0]);
-	}
-
-	glShaderSource(fragmentShaderId, 1, &FragmentSourcePointer, NULL);
-	glCompileShader(fragmentShaderId);
-
-	glGetShaderiv(fragmentShaderId, GL_COMPILE_STATUS, &result);
-	glGetShaderiv(fragmentShaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
-	{
-		glGetShaderInfoLog(fragmentShaderId, infoLogLength, NULL, &text[0]);
-	}
-
-	bgShaderId = glCreateProgram();
-	glAttachShader(bgShaderId, vertexShaderId);
-	glAttachShader(bgShaderId, fragmentShaderId);
-	glLinkProgram(bgShaderId);
-
-	// Check the program
-	glGetProgramiv(bgShaderId, GL_LINK_STATUS, &result);
-	glGetProgramiv(bgShaderId, GL_INFO_LOG_LENGTH, &infoLogLength);
-	if (infoLogLength > 0)
-	{
-		glGetProgramInfoLog(bgShaderId, infoLogLength, NULL, &text[0]);
-	}
-
-	glDetachShader(bgShaderId, vertexShaderId);
-	glDetachShader(bgShaderId, fragmentShaderId);
-
-	glDeleteShader(vertexShaderId);
-	glDeleteShader(fragmentShaderId);
-
-	Platform.cbFreeFile(VertexSourcePointer);
-	Platform.cbFreeFile(FragmentSourcePointer);
-}
-
 internal void ProcessRenderCommands(GameState* gameState, RenderCommandGroup* renderCommands)
 {
 	if (gameState->Console->IsVisible)
@@ -103,14 +48,15 @@ internal void Render(float deltaTime, GameState* gameState, RenderCommandGroup* 
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-#if 0
+#if 1
 	static bool isInit = false;
 	static GLuint bgQuadVAO;
 	static GLuint bgQuadVBO;
+	static cbShaderProgram* program;
 	if(!isInit)
 	{
 		isInit = true;
-		InitBackgroundShader();
+		program = cbCreateProgram("..\\cbGame\\shader\\noise.v", "..\\cbGame\\shader\\noise.f");
 
 		glGenVertexArrays(1, &bgQuadVAO);
 		glBindVertexArray(bgQuadVAO);
@@ -133,23 +79,24 @@ internal void Render(float deltaTime, GameState* gameState, RenderCommandGroup* 
 	}
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
-	glUseProgram(bgShaderId);
 
-	glm::mat4 projection = glm::ortho(0.0f, 1.f, 0.0f, 1.f);
-	static GLuint projLoc = glGetUniformLocation(bgShaderId, "projection");
+	cbUseProgram(program);
+
+	static glm::mat4 projection = glm::ortho(0.0f, 1.f, 0.0f, 1.f);
+	GLuint projLoc = cbGetUniformLocation(program, "projection");
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projection[0][0]);
 
 	static float accum = 0, f = 8.f;
 	//ImGui::SliderFloat("Background Speed", &f, 0.0f, 100.0f);
 	accum += deltaTime * f;
 	
-	static GLuint resLoc = glGetUniformLocation(bgShaderId, "resolution");
+	GLuint resLoc = cbGetUniformLocation(program, "resolution"); 
 	glUniform1i(resLoc, 5);
 
-	static GLuint timeLoc = glGetUniformLocation(bgShaderId, "time");
+	GLuint timeLoc = cbGetUniformLocation(program, "time"); 
 	glUniform1f(timeLoc, accum);
 
-	static GLuint scaleLoc = glGetUniformLocation(bgShaderId, "scale");
+	GLuint scaleLoc = cbGetUniformLocation(program, "scale");
 	glUniform1f(scaleLoc, 0.007f);
 
 	glBindVertexArray(bgQuadVAO);

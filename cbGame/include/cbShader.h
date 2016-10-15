@@ -88,11 +88,12 @@ inline cbShader* cbCreateShader_(cbArena *memory, cbShaderType type, char* path)
 #define cbCreateProgram(vertSource, fragSource)	cbCreateProgram_(&TransStorage->ShaderArena,							\
 												cbCreateShader_(&TransStorage->ShaderArena, cb_VERTEX_SHADER, vertSource),	\
 												cbCreateShader_(&TransStorage->ShaderArena, cb_FRAGMENT_SHADER,fragSource))
-inline cbShaderProgram* cbCreateProgram_(cbArena *memory, cbShader *vShader, cbShader *fShader)
+
+
+inline cbShaderProgram* cbCreateProgram_(cbShaderProgram *result, cbShader *vShader, cbShader *fShader)
 {
-	cbShaderProgram* result = PushStruct(memory, cbShaderProgram);
 	result->VertexShader = vShader;
-	result->FragmentShader= fShader;
+	result->FragmentShader = fShader;
 
 	result->ShaderId = glCreateProgram();
 	uint32 vertHandle = glCreateShader(vShader->ShaderType);
@@ -102,7 +103,7 @@ inline cbShaderProgram* cbCreateProgram_(cbArena *memory, cbShader *vShader, cbS
 	char* vertexShaderCode = (char *)Platform.cbReadTextFile(result->VertexShader->Filename, size);
 	char* fragmentShaderCode = (char *)Platform.cbReadTextFile(result->FragmentShader->Filename, size);
 
-	glShaderSource(vertHandle, 1, &vertexShaderCode, 0);	
+	glShaderSource(vertHandle, 1, &vertexShaderCode, 0);
 	glCompileShader(vertHandle);
 	bool isValid = cbCheckAndLogShaderErrors(vertHandle);
 
@@ -125,9 +126,17 @@ inline cbShaderProgram* cbCreateProgram_(cbArena *memory, cbShader *vShader, cbS
 	Platform.cbFreeFile(fragmentShaderCode);
 
 	result->IsValid = isValid;
-	if(!isValid)
+	if (!isValid)
 		glDeleteProgram(result->ShaderId);
+
 	return result;
+}
+
+inline cbShaderProgram* cbCreateProgram_(cbArena *memory, cbShader *vShader, cbShader *fShader)
+{
+	cbShaderProgram* result = PushStruct(memory, cbShaderProgram);
+	
+	return cbCreateProgram_(result, vShader, fShader);
 }
 
 inline void cbInvalidateProgram(cbShaderProgram *program)
@@ -141,18 +150,25 @@ inline bool cbProgramNeedsHotReload(cbShaderProgram *program)
 {
 	cbFiletime newVertexFT = Platform.GetLastFileTime(program->VertexShader->Filename);
 	if (Platform.CompareFileTime(newVertexFT, program->VertexShader->LastWriteTime) != 0)
+	{
+		program->VertexShader->LastWriteTime = newVertexFT;
 		return true;
+	}
 
 	cbFiletime newFragFT = Platform.GetLastFileTime(program->FragmentShader->Filename);
 	if (Platform.CompareFileTime(newFragFT, program->FragmentShader->LastWriteTime) != 0)
+	{
+		program->FragmentShader->LastWriteTime = newFragFT;
 		return true;
+	}
 
 	return false;
 }
 
 inline void cbReloadShader(cbShaderProgram* shader)
 {
-
+	cbInvalidateProgram(shader);
+	cbCreateProgram_(shader, shader->VertexShader, shader->FragmentShader);
 }
 
 inline bool cbUseProgram(cbShaderProgram *program)
