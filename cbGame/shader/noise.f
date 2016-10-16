@@ -78,7 +78,7 @@ float snoise(vec3 v){
 
 const vec3 white =	vec3(1.0,1.0,1.0);
 const vec3 red =	vec3(1.0,0.0,0.0);
-const vec3 green =	vec3(0.0,1.0,0.0);
+const vec3 green =	vec3(0.0,0.7,0.7);
 const vec3 blue =	vec3(0.0,0.0,1.0);
 
 uniform int resolution;
@@ -111,7 +111,7 @@ void main()
 	float noise = smoothThing(vec3(gl_FragCoord.xy,time),resolution, 0.5, scale, 0, 1);
 
 	vec3 tempColor = mix(white, green, smoothstep(0.1, 0.9, noise));
-	//tempColor = mix(tempColor, blue, smoothstep(0.5, 0.75, noise));
+	tempColor = mix(tempColor, blue, smoothstep(0.5, 0.75, noise));
 	//tempColor = mix(tempColor, green, smoothstep(0.75, 1, noise));
 		
 	color = vec4(tempColor,1.0);

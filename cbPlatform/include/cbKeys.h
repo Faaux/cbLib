@@ -134,3 +134,12 @@
 #define cbKey_RIGHTSHIFT 0xA1
 #define cbKey_LEFTCONTROL 0xA2
 #define cbKey_RIGHTCONTROL 0xA3
+
+#define cbKey_OEM_1 0xBA
+#define cbKey_OEM_2 0xBF
+#define cbKey_OEM_3 0xC0
+#define cbKey_OEM_4 0xDB
+#define cbKey_OEM_5 0xDC
+#define cbKey_OEM_6 0xDD
+#define cbKey_OEM_7 0xDE
+#define cbKey_OEM_8 0xDF

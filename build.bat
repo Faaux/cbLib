@@ -18,22 +18,27 @@ del *.pdb > NUL 2> NUL
 
 REM 64-bit build
 REM Optimization switches /wO2
+
+
 echo WAITING FOR PDB > lock.tmp
 cl %CommonCompilerFlags% %IncludeFolders% ..\cbGame\src\cbGame.cpp -LD /link %CommonLinkerFlags%  %CommonLinkerLibs% -PDB:cbGame_%random%.pdb 
 set LastError=%ERRORLEVEL%
 del lock.tmp
 
-
-cl %CommonCompilerFlags% %IncludeFolders% ..\cbPlatform\src\cbPlatform.cpp /link %CommonLinkerFlags% %CommonLinkerLibs%
+IF %1.==. (
+	cl %CommonCompilerFlags% %IncludeFolders% ..\cbPlatform\src\cbPlatform.cpp /link %CommonLinkerFlags% %CommonLinkerLibs%
+)
 popd
 
 pushd bin
 IF NOT EXIST shaders mkdir shaders
 popd
 
-xcopy ".\cbGame\shader" ".\bin\shaders" /S /Y /q
-xcopy "ThirdParty\bin" ".\bin" /S /Y /q
-xcopy ".\res" ".\bin" /S /Y /q
+IF %1.==. (
+	xcopy ".\cbGame\shader" ".\bin\shaders" /S /Y /q
+	xcopy "ThirdParty\bin" ".\bin" /S /Y /q
+	xcopy ".\res" ".\bin" /S /Y /q
+)
 
 ctime -end cbLib.ctm %LastError%
 

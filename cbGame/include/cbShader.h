@@ -33,7 +33,7 @@ struct cbShaderProgram
 	int UniformLocations[MAX_UNIFORMS];
 };
 
-inline bool cbCheckAndLogShaderErrors(uint32 handle)
+inline bool cbCheckAndLogShaderErrors(uint32 handle, char* file)
 {
 	GLint success = 0;
 	int infoLogLength;
@@ -46,7 +46,7 @@ inline bool cbCheckAndLogShaderErrors(uint32 handle)
 		if (infoLogLength > 0)
 		{
 			glGetShaderInfoLog(handle, infoLogLength, NULL, &text[0]);
-			//ToDo: Log to console
+			AddLog(Console, "[error] %s\n%s\n", file, text);
 		}
 		return false;
 	}
@@ -67,7 +67,7 @@ inline bool cbCheckAndLogProgramErrors(uint32 handle)
 		if (infoLogLength > 0)
 		{
 			glGetProgramInfoLog(handle, infoLogLength, NULL, &text[0]);
-			//ToDo: Log to console
+			AddLog(Console, "[error] %s\n", text);
 		}
 		return false;
 	}
@@ -105,11 +105,11 @@ inline cbShaderProgram* cbCreateProgram_(cbShaderProgram *result, cbShader *vSha
 
 	glShaderSource(vertHandle, 1, &vertexShaderCode, 0);
 	glCompileShader(vertHandle);
-	bool isValid = cbCheckAndLogShaderErrors(vertHandle);
+	bool isValid = cbCheckAndLogShaderErrors(vertHandle, result->VertexShader->Filename);
 
 	glShaderSource(fragHandle, 1, &fragmentShaderCode, 0);
 	glCompileShader(fragHandle);
-	isValid = isValid && cbCheckAndLogShaderErrors(fragHandle);
+	isValid = isValid && cbCheckAndLogShaderErrors(fragHandle, result->FragmentShader->Filename);
 
 	glAttachShader(result->ShaderId, vertHandle);
 	glAttachShader(result->ShaderId, fragHandle);
@@ -167,6 +167,7 @@ inline bool cbProgramNeedsHotReload(cbShaderProgram *program)
 
 inline void cbReloadShader(cbShaderProgram* shader)
 {
+	AddLog(Console, "# Hot reloaded shader: %s, %s\n", shader->VertexShader->Filename, shader->FragmentShader->Filename);
 	cbInvalidateProgram(shader);
 	cbCreateProgram_(shader, shader->VertexShader, shader->FragmentShader);
 }

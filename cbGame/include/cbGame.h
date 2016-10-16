@@ -23,3 +23,4 @@ struct TransientStorage
 
 extern Win32PlatformCode Platform;
 extern TransientStorage* TransStorage;
+extern cbConsole* Console;

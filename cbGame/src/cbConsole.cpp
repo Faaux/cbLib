@@ -10,7 +10,7 @@
 
 
 
-internal void AddLog(cbConsole* console, const char* fmt, ...)
+void AddLog(cbConsole* console, const char* fmt, ...)
 {
 	char buf[256];
 	va_list args;
@@ -18,26 +18,36 @@ internal void AddLog(cbConsole* console, const char* fmt, ...)
 	vsnprintf(buf, ArrayCount(buf), fmt, args);
 	buf[ArrayCount(buf) - 1] = 0;
 	va_end(args);
-	ZeroSize(CONSOLE_LENGTH, console->Items[console->ItemCount % CONSOLE_SIZE]);
-	cbStrCopy(console->Items[console->ItemCount++ % CONSOLE_SIZE], buf);
-	
+	ZeroSize(CONSOLE_LENGTH, console->Items[console->CurrentItem % CONSOLE_SIZE]);
+	cbStrCopy(console->Items[console->CurrentItem++ % CONSOLE_SIZE], buf);
+	if(console->ItemCount < CONSOLE_SIZE)
+		console->ItemCount++;
+
 	static bool HadWrap = false;
 	if (HadWrap)
 		console->FirstItem = (console->FirstItem + 1) % CONSOLE_SIZE;
 	
-	if (console->ItemCount >= CONSOLE_SIZE)
+	if (console->CurrentItem >= CONSOLE_SIZE)
 	{
-		console->ItemCount %= CONSOLE_SIZE;
+		console->CurrentItem %= CONSOLE_SIZE;
 		HadWrap = true;
 	}
 	
 	console->ScrollToBottom = true;
 }
 
+internal void Clear(cbConsole *console)
+{
+	console->CurrentItem = 0;
+	console->FirstItem = 0;
+	console->ItemCount = 0;
+	console->ScrollToBottom = true;
+	ZeroSize(ArrayCount(console->Items), console->Items);
+}
 
 internal void Rebuild(cbConsole *console)
 {
-	char cmdline[] = "cmd.exe /K \"cd .. & del build.txt & build.bat >> build.txt\"";
+	char cmdline[] = "cmd.exe /K \"cd .. & del build.txt & build.bat small>> build.txt\"";
 
 	STARTUPINFOA si = { sizeof(STARTUPINFO) };
 	PROCESS_INFORMATION pi;
@@ -59,7 +69,8 @@ internal void Rebuild(cbConsole *console)
 
 internal cbConsoleCommand _consoleCommands[] =
 {
-	{"build", &Rebuild}
+	{"build", &Rebuild},
+	{"clear", &Clear}
 };
 
 
@@ -82,6 +93,8 @@ internal void ExecCommand(cbConsole *console, const char* command)
 
 internal void AddImguiConsole(cbConsole *console)
 {
+	if (!console->IsVisible)
+		return;
 	ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiSetCond_FirstUseEver);
 	if (!ImGui::Begin("Console"))
 	{
@@ -99,7 +112,7 @@ internal void AddImguiConsole(cbConsole *console)
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 1)); // Tighten spacing
 
-		for (uint32 i = 0, index = console->FirstItem; i < CONSOLE_SIZE; i++, index=(index + 1) % CONSOLE_SIZE)
+		for (uint32 i = 0, index = console->FirstItem; i < console->ItemCount; i++, index=(index + 1) % CONSOLE_SIZE)
 		{
 			const char* item = console->Items[index];
 			if (!filter.PassFilter(item))

@@ -6,6 +6,7 @@
 
 Win32PlatformCode Platform;
 TransientStorage *TransStorage;
+cbConsole *Console;
 
 #include "cbFont.cpp"
 #include "imgui.cpp"
@@ -112,8 +113,6 @@ internal void Update()
 
 EXPORT GAME_LOOP(GameLoop)
 {
-	Platform = gameMemory->Platform;
-
 	GameState* gameState = (GameState*)gameMemory->PermanentStorage;
 	if(!gameState->IsInitialized)
 	{
@@ -124,10 +123,12 @@ EXPORT GAME_LOOP(GameLoop)
 		gameState->ArenaSize = totalSize;
 		gameState->IsInitialized = true;
 
-		gameState->Console = PushStruct(&gameState->Arena, cbConsole);
-	}
+		gameState->Console = PushStruct(&gameState->Arena, cbConsole);		
+	}	
 
-	
+	Console = gameState->Console;
+	Platform = gameMemory->Platform;
+
 	TransStorage = (TransientStorage *)gameMemory->TransientStorage;
 	if(gameMemory->DLLHotSwapped)
 	{
@@ -151,8 +152,10 @@ EXPORT GAME_LOOP(GameLoop)
 
 		TransStorage->IsInitialized = true;
 	}
-	
-	
+	if (!input->OldKeyboardInput.Keys[cbKey_OEM_5].IsDown && input->NewKeyboardInput.Keys[cbKey_OEM_5].IsDown)
+	{
+		gameState->Console->IsVisible = !gameState->Console->IsVisible;
+	}
 	UpdateImgui(deltaTime, input);
     Update();
 	//ImGui::ShowTestWindow();
