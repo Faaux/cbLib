@@ -10,7 +10,6 @@ struct GameState
 	bool IsInitialized;
 	mem_size ArenaSize;
 	cbArena Arena;
-
 	cbConsole* Console;
 };
 

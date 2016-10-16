@@ -31,7 +31,7 @@ FREE_IMAGE(Win32FreeImage);
 typedef LOAD_IMAGE(win32_load_image);
 LOAD_IMAGE(Win32LoadImage);
 
-#define READ_TEXT_FILE(name) void *name(const char *path, long &size)
+#define READ_TEXT_FILE(name) char *name(const char *path, long &size)
 typedef READ_TEXT_FILE(win32_read_text_file);
 READ_TEXT_FILE(Win32ReadTextFile);
 

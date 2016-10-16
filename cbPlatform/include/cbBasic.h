@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cbInclude.h>
 
+
 inline void cbStrCopy(char* destination, const char* source)
 {
 	while(*source)

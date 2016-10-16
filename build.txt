@@ -1,0 +1,7 @@
+cbGame.cpp
+   Creating library cbGame.lib and object cbGame.exp
+cbPlatform.cpp
+LINK : fatal error LNK1104: cannot open file 'cbPlatform.exe'
+4 File(s) copied
+2 File(s) copied
+CTIME: 2.719 seconds (cbLib.ctm)

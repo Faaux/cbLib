@@ -12,14 +12,12 @@ TransientStorage *TransStorage;
 #include "cbImgui.cpp"
 #include "imgui_draw.cpp"
 #include "imgui_demo.cpp"
+#include "cbConsole.cpp"
 
 static GLuint bgShaderId;
 
 internal void ProcessRenderCommands(GameState* gameState, RenderCommandGroup* renderCommands)
 {
-	if (gameState->Console->IsVisible)
-		RenderConsole(renderCommands, gameState->Console);
-
 	uint8 * cmdPtr = (uint8*)renderCommands->BufferDataAt;
 	while (cmdPtr < renderCommands->BufferBase + renderCommands->BufferSize)
 	{
@@ -126,8 +124,7 @@ EXPORT GAME_LOOP(GameLoop)
 		gameState->ArenaSize = totalSize;
 		gameState->IsInitialized = true;
 
-		gameState->Console = PushStruct(&totalArena, cbConsole);
-		gameState->Console->IsVisible = false;
+		gameState->Console = PushStruct(&gameState->Arena, cbConsole);
 	}
 
 	
@@ -158,7 +155,8 @@ EXPORT GAME_LOOP(GameLoop)
 	
 	UpdateImgui(deltaTime, input);
     Update();
-	ImGui::ShowTestWindow();
+	//ImGui::ShowTestWindow();
+	AddImguiConsole(gameState->Console);
 	//ImGui::Text("Hello, world!");	
 	//ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 

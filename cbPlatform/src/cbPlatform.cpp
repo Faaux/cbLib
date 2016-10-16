@@ -366,9 +366,9 @@ READ_TEXT_FILE(Win32ReadTextFile)
 {
 	FILE *f;
 	errno_t err = fopen_s(&f, path, "rb");
-	if (err != 0)
+	while (err != 0)
 	{
-		return nullptr;
+		err = fopen_s(&f, path, "rb");
 	}
 	// Go to end
 	fseek(f, 0, SEEK_END);
@@ -388,17 +388,17 @@ READ_TEXT_FILE(Win32ReadTextFile)
 
 	// close stream
 	fclose(f);
-	return memory;
+	return (char *)memory;
 }
 
 READ_FILE(Win32ReadFile)
 {
     FILE *f;
     errno_t err = fopen_s(&f, path, "rb");
-    if (err != 0)
-    {
-        return nullptr;
-    }
+	while (err != 0)
+	{
+		err = fopen_s(&f, path, "rb");
+	}
     // Go to end
     fseek(f, 0, SEEK_END);
 

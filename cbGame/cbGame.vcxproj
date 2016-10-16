@@ -105,11 +105,12 @@
     <ClInclude Include="include\cbRenderGroup.h" />
     <ClInclude Include="include\cbShader.h" />
     <ClInclude Include="include\GLM.h" />
-    <ClInclude Include="src\imconfig.h" />
-    <ClInclude Include="src\imgui.h" />
-    <ClInclude Include="src\imgui_internal.h" />
+    <ClInclude Include="include\imconfig.h" />
+    <ClInclude Include="include\imgui.h" />
+    <ClInclude Include="include\imgui_internal.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\cbConsole.cpp" />
     <ClCompile Include="src\cbFont.cpp" />
     <ClCompile Include="src\cbGame.cpp" />
     <ClCompile Include="src\cbImgui.cpp" />

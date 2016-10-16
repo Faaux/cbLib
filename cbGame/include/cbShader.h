@@ -100,8 +100,8 @@ inline cbShaderProgram* cbCreateProgram_(cbShaderProgram *result, cbShader *vSha
 	uint32 fragHandle = glCreateShader(fShader->ShaderType);
 
 	long size;
-	char* vertexShaderCode = (char *)Platform.cbReadTextFile(result->VertexShader->Filename, size);
-	char* fragmentShaderCode = (char *)Platform.cbReadTextFile(result->FragmentShader->Filename, size);
+	char* vertexShaderCode = Platform.cbReadTextFile(result->VertexShader->Filename, size);
+	char* fragmentShaderCode = Platform.cbReadTextFile(result->FragmentShader->Filename, size);
 
 	glShaderSource(vertHandle, 1, &vertexShaderCode, 0);
 	glCompileShader(vertHandle);
