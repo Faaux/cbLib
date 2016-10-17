@@ -5,11 +5,6 @@
 #include "imgui.h"
 #include <vector>
 
-#define WINDOWS_LEAN_AND_MEAN
-#include <Windows.h>
-
-
-
 void AddLog(cbConsole* console, const char* fmt, ...)
 {
 	char buf[256];
@@ -48,23 +43,7 @@ internal void Clear(cbConsole *console)
 internal void Rebuild(cbConsole *console)
 {
 	char cmdline[] = "cmd.exe /K \"cd .. & del build.txt & build.bat small>> build.txt\"";
-
-	STARTUPINFOA si = { sizeof(STARTUPINFO) };
-	PROCESS_INFORMATION pi;
-
-	if (!CreateProcessA(NULL, cmdline, NULL, NULL, false, CREATE_NO_WINDOW,
-		NULL, NULL, &si, &pi))
-	{
-		return;
-	}
-	WaitForSingleObject(pi.hProcess, INFINITE);
-	CloseHandle(pi.hProcess);
-	CloseHandle(pi.hThread);
-
-	long size;
-	char* buildLog = Platform.cbReadTextFile("..\\build.txt", size);
-	AddLog(console, "%s\n", buildLog);
-	Platform.cbFreeFile(buildLog);
+	Platform.RunExternalProgram(cmdline, [](const char * log) { AddLog(Console, "%s\n", log); });
 }
 
 internal cbConsoleCommand _consoleCommands[] =

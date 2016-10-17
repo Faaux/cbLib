@@ -311,6 +311,29 @@ internal FILETIME GetLastWriteTime(const char *fileName)
 	return result;
 }
 
+RUN_EXTERNAL_PROGRAM(Win32RunExternalProgram)
+{
+	STARTUPINFOA si = { sizeof(STARTUPINFO) };
+	PROCESS_INFORMATION pi;
+
+	if (!CreateProcessA(NULL, command, NULL, NULL, false, CREATE_NO_WINDOW,
+		NULL, NULL, &si, &pi))
+	{
+		return;
+	}
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+
+	if (Output)
+	{
+		long size;
+		char* buildLog = Win32ReadTextFile("..\\build.txt", size);
+		Output(buildLog);
+		Win32FreeFile(buildLog);
+	}
+}
+
 SWAP_BUFFER(Win32SwapBuffer)
 {
     SwapBuffers(_deviceContext);
@@ -519,6 +542,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
 	Win32PlatformCode platformCode;
+	platformCode.RunExternalProgram = &Win32RunExternalProgram;
 	platformCode.CompareFileTime = &Win32CompareFileTime;
 	platformCode.GetLastFileTime = &Win32GetLastFileTime;
 	platformCode.SetClipboardText = &Win32SetClipboardText;

@@ -6,6 +6,9 @@ struct cbFiletime
 	uint32 LowPart;
 	uint32 HighPart;
 };
+#define RUN_EXTERNAL_PROGRAM(name) void name(char* command, void(*Output)(const char*))
+typedef RUN_EXTERNAL_PROGRAM(win32_run_external_program);
+RUN_EXTERNAL_PROGRAM(Win32RunExternalProgram);
 
 #define COMPARE_FILE_TIME(name) int name(const cbFiletime lhs, const cbFiletime rhs)
 typedef COMPARE_FILE_TIME(win32_cmp_file_time);
@@ -41,7 +44,7 @@ READ_FILE(Win32ReadFile);
 
 #define FREE_FILE(name) void name(void* memory)
 typedef FREE_FILE(win32_free_file);
-FREE_FILE(Win32ReadFile);
+FREE_FILE(Win32FreeFile);
 
 #define SWAP_BUFFER(name) void name()
 typedef SWAP_BUFFER(win32_swap_buffer);
@@ -56,6 +59,7 @@ GET_WIN_SIZE(GetWindowHeight);
 
 struct Win32PlatformCode
 {
+	win32_run_external_program *RunExternalProgram;
 	win32_cmp_file_time *CompareFileTime;
 	win32_get_last_file_time *GetLastFileTime;
 	win32_set_clipboard_text *SetClipboardText;

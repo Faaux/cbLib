@@ -78,8 +78,8 @@ float snoise(vec3 v){
 
 const vec3 white =	vec3(1.0,1.0,1.0);
 const vec3 red =	vec3(1.0,0.0,0.0);
-const vec3 green =	vec3(0.0,0.7,0.7);
-const vec3 blue =	vec3(0.0,0.0,1.0);
+const vec3 green =	vec3(1.0,0.6,0.0);
+const vec3 blue =	vec3(1.0,0.0,0.0);
 
 uniform int resolution;
 uniform float time;
