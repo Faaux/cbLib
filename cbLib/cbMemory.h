@@ -1,5 +1,5 @@
 #pragma once
-#include <cbInclude.h>
+#include "cbInclude.h"
 
 struct cbArena
 {
@@ -98,7 +98,7 @@ inline void SubArena(cbArena *result, cbArena *arena, mem_size size, ArenaPushPa
 	result->Used = 0;
 }
 
-inline void * Copy(mem_size size, void *sourceInit, void *destInit)
+inline void *Copy(mem_size size, void *sourceInit, void *destInit)
 {
 	uint8 *source = (uint8 *)sourceInit;
 	uint8 *dest = (uint8 *)destInit;

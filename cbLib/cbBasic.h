@@ -1,7 +1,19 @@
 #pragma once
 #include <cstdio>
-#include <cbInclude.h>
+#include "cbInclude.h"
 
+inline char *cbGetLastPosOf(const char search, const char* toSearch)
+{
+	char *current = nullptr;
+	while (*toSearch)
+	{
+		if (*toSearch++ == search)
+		{
+			current = (char *)toSearch - 1;
+		}
+	}
+	return current;
+}
 
 inline void cbStrCopy(char* destination, const char* source)
 {

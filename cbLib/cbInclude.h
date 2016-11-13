@@ -39,4 +39,4 @@ typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
 
-typedef uint64 mem_size;
+typedef size_t mem_size;

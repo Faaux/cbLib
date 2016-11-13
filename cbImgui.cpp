@@ -214,7 +214,4 @@ void UpdateImgui(float deltaTime, GameInput *input)
 	{
 		io.AddInputCharacter(input->NewKeyboardInput.InputText[i]);
 	}
-
-
-	ImGui::NewFrame();
 }

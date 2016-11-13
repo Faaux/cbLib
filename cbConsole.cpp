@@ -1,7 +1,7 @@
-#include <cbInclude.h>
-#include <cbBasic.h>
-#include <cbConsole.h>
-#include <cbGame.h>
+#include "cbInclude.h"
+#include "cbBasic.h"
+#include "cbConsole.h"
+#include "cbGame.h"
 #include "imgui.h"
 #include <vector>
 
@@ -70,7 +70,7 @@ internal void ExecCommand(cbConsole *console, const char* command)
 	AddLog(console, "[error] Unknown command: '%s'\n", command);
 }
 
-internal void AddImguiConsole(cbConsole *console)
+void AddImguiConsole(cbConsole *console)
 {
 	if (!console->IsVisible)
 		return;
@@ -117,7 +117,7 @@ internal void AddImguiConsole(cbConsole *console)
 		while (input_end > console->InputBuf && input_end[-1] == ' ') input_end--; *input_end = 0;
 		if (console->InputBuf[0])
 			ExecCommand(console, console->InputBuf);
-		strcpy(console->InputBuf, "");
+		strcpy_s(console->InputBuf, "");
 	}
 
 	if (ImGui::IsItemHovered() || (ImGui::IsRootWindowOrAnyChildFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)))

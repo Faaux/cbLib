@@ -20,3 +20,4 @@ struct cbConsoleCommand
 };
 
 void AddLog(cbConsole* console, const char* fmt, ...);
+void AddImguiConsole(cbConsole *console);

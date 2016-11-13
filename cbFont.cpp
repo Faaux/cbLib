@@ -1,8 +1,10 @@
+#include "cbFont.h"
+#include "cbInclude.h"
+#include "cbGame.h"
+#include "cbRenderGroup.h"
+
 #include <GL/glew.h>
 #include <GLM.h>
-#include <cbInclude.h>
-#include <cbGame.h>
-#include <cbRenderGroup.h>
 #include <cstdio>
 
 struct SDFFontData
@@ -202,7 +204,7 @@ internal void InitSDF()
 	InitFont();
 }
 
-internal void DrawString(RenderStringData *data)
+void DrawString(RenderStringData *data)
 {
 	static bool wasInit = false;
 	if (!wasInit)

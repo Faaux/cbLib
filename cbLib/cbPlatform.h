@@ -1,5 +1,6 @@
 #pragma once
-#include <cbInclude.h>
+#include "cbInclude.h"
+#include "cbDebug.h"
 
 struct cbFiletime
 {
@@ -83,6 +84,7 @@ struct GameMemory
 	void *TransientStorage;
 
 	Win32PlatformCode Platform;
+	debug_table *GlobalDebugTable;
 
 	bool DLLHotSwapped;
 };

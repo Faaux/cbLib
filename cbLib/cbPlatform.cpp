@@ -5,9 +5,10 @@
 #include <GL/glew.h>
 #include <GL/wglew.h>
 
-#include <cbGame.h>
-#include <cbInclude.h>
-#include <cbPlatform.h>
+#include "cbGame.h"
+#include "cbInclude.h"
+#include "cbPlatform.h"
+#include "cbDebug.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
@@ -39,6 +40,8 @@ internal uint32 _windowHeight = 720;
 internal bool _isCloseRequested;
 
 internal GameInput _gameInput;
+
+debug_table *GlobalDebugTable;
 
 
 internal void UpdateKeyState(uint32 vkCode, bool isDown)
@@ -232,6 +235,7 @@ internal void Win32InitWindowAndOpenGL()
 
 internal float Win32UpdatePlatform(GameInput *input)
 {
+	TIMED_FUNCTION();
 	input->OldMouseInputState = input->NewMouseInputState;
 	input->OldKeyboardInput = input->NewKeyboardInput;
 	input->NewKeyboardInput.CurrentLength = 0;
@@ -471,8 +475,18 @@ internal Win32GameCode Win32LoadGameCode()
 {
     Win32GameCode result = {};
 
-    char *sourceDllName = "cbGame.dll";
-    char *tempDllName = "cbGame_temp.dll";
+	char sourceDllName[MAX_PATH] = {};
+	char tempDllName[MAX_PATH] = {};
+	GetModuleFileNameA(0, &sourceDllName[0], MAX_PATH);
+
+	cbStrCopy(tempDllName, sourceDllName);
+
+	char *index = cbGetLastPosOf('\\', sourceDllName) + 1;
+	cbStrCopy(index, "cbGame.dll");
+
+	index = cbGetLastPosOf('\\', tempDllName) + 1;
+	cbStrCopy(index, "cbGame_temp.dll");
+
 
     result.LastWriteTime = GetLastWriteTime(sourceDllName);
 
@@ -524,8 +538,13 @@ internal void Win32UnloadGameCode(Win32GameCode *gameCode)
     gameCode->GameLoop = GameLoopStub;
 }
 
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+//int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int main()
 {
+	// Debug Memory
+	GlobalDebugTable = (debug_table *)malloc(sizeof(debug_table));
+	ZeroSize(sizeof(debug_table), GlobalDebugTable);
+
     // Init Game
     Win32InitWindowAndOpenGL();
 
@@ -538,7 +557,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	const mem_size transSize = Megabytes(256);
 	void *transientMem = VirtualAlloc(0, transSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	Assert(transientMem);
-
 
 
 	Win32PlatformCode platformCode;
@@ -562,15 +580,22 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 	gameState.TransientStorageSize = transSize;
 	gameState.TransientStorage = transientMem;
 	gameState.Platform = platformCode;
+	gameState.GlobalDebugTable = GlobalDebugTable;
 	
 	glClearColor(0.2f, 0.4f, 0.3f, 1.0f);
 
     Win32GameCode gameCode = Win32LoadGameCode();
 
+	char gameDllName[MAX_PATH] = { 0 };
+	GetModuleFileNameA(0, &gameDllName[0], MAX_PATH);
+	char *index = cbGetLastPosOf('\\', gameDllName) + 1;
+	cbStrCopy(index, "cbGame.dll");
+
 	gameState.DLLHotSwapped = true;
     while (!_isCloseRequested)
     {
-        FILETIME lastWriteTime = GetLastWriteTime("cbGame.dll");
+		FRAME_START();
+        FILETIME lastWriteTime = GetLastWriteTime(gameDllName);
         if (CompareFileTime(&lastWriteTime, &gameCode.LastWriteTime) != 0)
         {
             Win32UnloadGameCode(&gameCode);
@@ -584,13 +609,16 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // Early exit
         if (_isCloseRequested)
-            continue;
-		
+            continue;		
+
         gameCode.GameLoop(deltaTime, &gameState, &_gameInput);
 		
 		Win32SwapBuffer();
 
 		gameState.DLLHotSwapped = false;
+		FRAME_END();
     }
+
+	free(GlobalDebugTable);
     return 0;
 }
