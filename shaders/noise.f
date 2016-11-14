@@ -107,7 +107,7 @@ float smoothThing(vec3 x, int octave, float persistence, float scale, float low,
 
 void main()
 {
-	float noise = smoothThing(vec3(gl_FragCoord.xy,time),resolution, 0.55, scale, 0, 1);
+	float noise = smoothThing(vec3(gl_FragCoord.xy,time),resolution, 0.7, scale, 0, 1);
 
 	vec3 tempColor = mix(white, firstColor, smoothstep(0.1, 0.9, noise));
 	tempColor = mix(tempColor, secondColor, smoothstep(0.5, 0.75, noise));

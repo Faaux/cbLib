@@ -94,3 +94,4 @@ _ReSharper*/
 *.nuget.targets
 
 build.txt
+imgui.ini

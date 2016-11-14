@@ -9,6 +9,7 @@
 #include "imgui.h"
 #include "cbImgui.h"
 #include <GL/glew.h>
+#include "imgui_internal.h"
 
 Win32PlatformCode Platform;
 TransientStorage *TransStorage;
@@ -114,7 +115,6 @@ internal void Update()
 
 internal void EvaluateDebugInfo()
 {
-	static ImGuiTextFilter filter;
 
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
 	static float winAlpha = .7f;
@@ -123,47 +123,80 @@ internal void EvaluateDebugInfo()
 		ImGui::End();
 		return;
 	}
-	ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+	float frameTime = 1000.0f / ImGui::GetIO().Framerate;
+
+	// Framerate Graph
+	const int recordHistory = 200;
+	static int currentHistory = 0;
+	static float* fpsHistory = (float *)malloc(recordHistory * sizeof(float));
+
+	fpsHistory[currentHistory] = frameTime;
+	currentHistory = (currentHistory + 1) % recordHistory;
+
+	ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, nullptr, 0.0f, 1.0f, ImVec2(0, 80));
+	ImGui::SameLine();
+	ImGui::Text("%s\n%-3.4f\n\n%s\n%-3.4f", "ms/frame", frameTime, "fps", ImGui::GetIO().Framerate);
+
 	ImGui::Spacing();
 	ImGui::SliderFloat("Transparency", &winAlpha, 0.0f, 1.0f);
-	ImGui::Spacing();
-	filter.Draw();
+	if (GlobalDebugTable->CurrentIndex == GlobalDebugTable->NextIndex)
+	{
+		ImGui::End();
+		return;
+	}
 
+	ImGui::Spacing();
 	const uint32 MAX = 0xFFFFFFFF;
 
 	debug_event *current = &GlobalDebugTable->Events[GlobalDebugTable->CurrentIndex];
 	Assert(current->Type == FrameStart);
 
-	uint64 totalCylces = __rdtsc()-current->Clock;
+	uint64 totalCylces = __rdtsc() - current->Clock;
 
 	GlobalDebugTable->CurrentIndex = (GlobalDebugTable->CurrentIndex + 1) & MAX;
 	current = &GlobalDebugTable->Events[GlobalDebugTable->CurrentIndex];
 
-	debug_event *eventStack[32];
+	debug_event *eventStack[32] = {};
+	bool treeStateStack[32] = {};
 	uint32 currentIndex = 0;
-	while(current->GUID && current->Type != FrameEnd)
-	{		
+
+	while (current->GUID && current->Type != FrameEnd)
+	{
 		Assert(currentIndex < ArrayCount(eventStack));
 		switch (current->Type)
 		{
 		case BeginBlock:
 		{
-			eventStack[currentIndex++] = current;
+			eventStack[currentIndex] = current;
+			char *toPrint = cbGetLastPosOf('|', current->GUID) + 1;
+
+			bool isOpen = true;
+			for (uint32 i = 0; i < currentIndex; i++)
+				isOpen = isOpen && treeStateStack[i];
+
+			if (isOpen)
+				treeStateStack[currentIndex] = ImGui::TreeNode(toPrint);
+			currentIndex++;
 			break;
 		}
 		case EndBlock:
 		{
 			currentIndex--;
-			debug_event *startEvent = eventStack[currentIndex];
+			bool isOpen = true;
+			for (uint32 i = 0; i <= currentIndex; i++)
+				isOpen = isOpen && treeStateStack[i];
 
-			float percentage = (float)(current->Clock - startEvent->Clock) / (float)totalCylces * 100.f;
+			if (isOpen)
+			{
+				debug_event *startEvent = eventStack[currentIndex];
+				float percentage = (float)(current->Clock - startEvent->Clock) / (float)totalCylces * 100.f;
+				ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%f%%", percentage);
 
-			char *toPrint = cbGetLastPosOf('|', startEvent->GUID) + 1;
-			if (filter.PassFilter(toPrint))
-				ImGui::BulletText("%s: %f%%", toPrint, percentage);
+				ImGui::TreePop();
+			}
 
 			break;
-		}			
+		}
 		default:
 			Assert(false);
 			break;
@@ -171,10 +204,8 @@ internal void EvaluateDebugInfo()
 
 		GlobalDebugTable->CurrentIndex = (GlobalDebugTable->CurrentIndex + 1) & MAX;
 		current = &GlobalDebugTable->Events[GlobalDebugTable->CurrentIndex];
+
 	}
-
-
-	GlobalDebugTable->CurrentIndex = (GlobalDebugTable->CurrentIndex + 1) & MAX;
 	ImGui::End();
 }
 
@@ -195,9 +226,9 @@ EXPORT GAME_LOOP(GameLoop)
 		gameState->Console = PushStruct(&gameState->Arena, cbConsole);
 	}
 
-	Console = gameState->Console;	
+	Console = gameState->Console;
 	Platform = gameMemory->Platform;
-	
+
 
 	TransStorage = (TransientStorage *)gameMemory->TransientStorage;
 	if (gameMemory->DLLHotSwapped)
@@ -238,9 +269,9 @@ EXPORT GAME_LOOP(GameLoop)
 	Render(deltaTime, gameState, &renderCommands);
 
 	// Evaluate Timing Info and render with imgui
-	
+
 	EvaluateDebugInfo();
-	
+
 	// End Imgui Frame
 	BEGIN_BLOCK("Imgui Render");
 	ImGui::Render();

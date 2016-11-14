@@ -340,6 +340,7 @@ RUN_EXTERNAL_PROGRAM(Win32RunExternalProgram)
 
 SWAP_BUFFER(Win32SwapBuffer)
 {
+	TIMED_FUNCTION();
     SwapBuffers(_deviceContext);
 }
 
@@ -595,6 +596,7 @@ int main()
     while (!_isCloseRequested)
     {
 		FRAME_START();
+		BEGIN_BLOCK("Frame");
         FILETIME lastWriteTime = GetLastWriteTime(gameDllName);
         if (CompareFileTime(&lastWriteTime, &gameCode.LastWriteTime) != 0)
         {
@@ -616,6 +618,7 @@ int main()
 		Win32SwapBuffer();
 
 		gameState.DLLHotSwapped = false;
+		END_BLOCK();
 		FRAME_END();
     }
 
