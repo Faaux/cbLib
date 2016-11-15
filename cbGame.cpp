@@ -115,11 +115,93 @@ internal void Update()
 
 struct event_result
 {
-	debug_event *Start;
-	debug_event *End;
+	uint64 ElapsedCylces;
 	uint32 Level;
 	uint32 Index;
+	char *GUID;
 };
+
+internal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &size)
+{
+	TIMED_FUNCTION();
+
+	uint64 startIndex = GlobalDebugTable->CurrentIndex;
+	debug_event *start = &GlobalDebugTable->Events[startIndex];
+	Assert(start->Type == FrameStart);
+
+
+#define SetCurrentToNextElement() GlobalDebugTable->CurrentIndex = (GlobalDebugTable->CurrentIndex + 1) & 0xFFFF; \
+				current = &GlobalDebugTable->Events[GlobalDebugTable->CurrentIndex]
+	debug_event *current;
+	SetCurrentToNextElement();
+
+	// Check how many event there are for this frame
+	uint32 length = 0;
+	while (current->Type != FrameEnd)
+	{
+		Assert(current->GUID);
+		SetCurrentToNextElement();
+		length++;
+	}
+
+	cycles = current->Clock - start->Clock;
+
+	Assert(length % 2 == 0); // Else Begin/End mismatch
+
+							 // Setup buffers
+	size = length / 2;
+	event_result *eventStack = (event_result *)malloc(size * sizeof(event_result));
+	static event_result *eventList = nullptr;
+	if (eventList)
+		free(eventList);
+	eventList = (event_result *)malloc(size * sizeof(event_result));
+	ZeroSize(size * sizeof(event_result), eventList);
+	ZeroSize(size * sizeof(event_result), eventStack);
+
+	// Reset Current
+	GlobalDebugTable->CurrentIndex = startIndex;
+	SetCurrentToNextElement();
+
+	// Extract Information
+	uint32 currentLevel = 0;
+	uint32 eventIndex = 0;
+	for (uint32 i = 0; i < length; i++)
+	{
+		switch (current->Type)
+		{
+		case BeginBlock:
+		{
+			// New Block
+			event_result *slot = eventStack + currentLevel++;
+			slot->GUID = current->GUID;
+			slot->ElapsedCylces = current->Clock;
+			slot->Index = eventIndex++;
+			break;
+		}
+		case EndBlock:
+		{
+			currentLevel--;
+
+			event_result *eventResult = eventStack + currentLevel;
+			eventResult->ElapsedCylces = current->Clock - eventResult->ElapsedCylces;
+			eventResult->Level = currentLevel;
+
+			// Put into final list
+			event_result *listElement = eventList + eventResult->Index;
+			*listElement = *eventResult;
+			break;
+		}
+		default:
+			Assert(false);
+			break;
+		}
+		SetCurrentToNextElement();
+	}
+#undef SetCurrentToNextElement
+	free(eventStack);
+	return eventList;
+}
+
 
 internal void EvaluateDebugInfo()
 {
@@ -142,7 +224,7 @@ internal void EvaluateDebugInfo()
 	fpsHistory[currentHistory] = frameTime;
 	currentHistory = (currentHistory + 1) % recordHistory;
 
-	ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, nullptr, 0.0f, 1.0f, ImVec2(0, 80));
+	ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 80));
 	ImGui::SameLine();
 	ImGui::Text("%s\n%-3.4f\n\n%s\n%-3.4f", "ms/frame", frameTime, "fps", ImGui::GetIO().Framerate);
 
@@ -153,131 +235,59 @@ internal void EvaluateDebugInfo()
 		ImGui::End();
 		return;
 	}
-
-	// Profiling
 	ImGui::Spacing();
 
-	uint64 startIndex = GlobalDebugTable->CurrentIndex;
-	debug_event *start = &GlobalDebugTable->Events[startIndex];
-	Assert(start->Type == FrameStart);
-
-
-#define SetCurrentToNextElement() GlobalDebugTable->CurrentIndex = (GlobalDebugTable->CurrentIndex + 1) & 0xFFFF; \
-				current = &GlobalDebugTable->Events[GlobalDebugTable->CurrentIndex]
-	debug_event *current;
-	SetCurrentToNextElement();
-
-	// Check how many event there are for this frame
-	uint32 length = 0;
-	while (current->Type != FrameEnd)
+	// Profiling	
+	if (ImGui::CollapsingHeader("Profiling"))
 	{
-		Assert(current->GUID);
-		SetCurrentToNextElement();
-		length++;
-	}
+		uint64 cycles;
+		uint32 size;
+		event_result *eventList = ExtractLastFrameInformation(cycles, size);
 
-	uint64 totalCycles = current->Clock - start->Clock;
+		// Build Tree
+		uint32 currentLevel = 0;
 
-	Assert(length % 2 == 0); // Else Begin/End mismatch
-
-	// Setup buffers
-	uint32 size = length / 2;
-	event_result *eventStack = (event_result *)malloc(size * sizeof(event_result));
-	event_result *eventList = (event_result *)malloc(size * sizeof(event_result));
-	ZeroSize(size * sizeof(event_result), eventList);
-	ZeroSize(size * sizeof(event_result), eventStack);
-
-	// Reset Current
-	GlobalDebugTable->CurrentIndex = startIndex;
-	SetCurrentToNextElement();
-
-	// Extract Information
-	uint32 currentLevel = 0;
-	uint32 eventIndex = 0;
-	for (uint32 i = 0; i < length; i++)
-	{
-		switch (current->Type)
+		ImGui::Columns(2, "profileColumns", false);
+		for (uint32 index = 0; index < size; index++)
 		{
-		case BeginBlock:
-		{
-			// New Block
-			event_result *slot = eventStack + currentLevel++;
-			slot->Start = current;
-			slot->Index = eventIndex++;
-			break;
-		}
-		case EndBlock:
-		{
-			currentLevel--;
+			event_result *previous = index == 0 ? nullptr : &eventList[index - 1];
+			event_result *curResult = &eventList[index];
+			event_result *next = index - 1 == size ? nullptr : &eventList[index + 1];
 
-			event_result *eventResult = eventStack + currentLevel;
-			eventResult->End = current;
-			eventResult->Level = currentLevel;
-
-			// Put into final list
-			event_result *listElement = eventList + eventResult->Index;
-			*listElement = *eventResult;
-			break;
-		}
-		default:
-			Assert(false);
-			break;
-		}
-		SetCurrentToNextElement();
-	}
-#undef SetCurrentToNextElement
-	free(eventStack);
-
-
-	// Build Tree
-	currentLevel = 0;
-	event_result *previous = nullptr;
-	for (uint32 i = 0; i < size; i++)
-	{
-		event_result *curResult = &eventList[i];
-		float percentage = (curResult->End->Clock - curResult->Start->Clock) / (float)totalCycles;
-		char* name = cbGetLastPosOf('|', curResult->Start->GUID) + 1;
-
-		if (previous && previous->Level > curResult->Level)
-		{
-			Assert(currentLevel != 0);
-			ImGui::TreePop();
-			currentLevel--;
-		}
-
-		if (i == size - 1 || eventList[i + 1].Level <= curResult->Level)
-		{
-			ImGui::BulletText("%s  %-2.6f%%", name, percentage);
-		}
-		else if (ImGui::TreeNode(curResult->Start->GUID, "%s  %-2.6f%%", name, percentage))
-		{
-			currentLevel++;			
-		}
-		else
-		{
-			i++;
-			while (i < size)
+			if (previous && previous->Level > curResult->Level)
 			{
-				event_result *candidate = &eventList[i];
-				if (candidate->Level <= curResult->Level)
-				{
-					i--;
-					break;
-				}
-				i++;
+				Assert(currentLevel != 0);
+				ImGui::Unindent();
+				currentLevel--;
 			}
-		}
-		previous = curResult;
-	}
 
-	for (uint32 i = 0; i < currentLevel; i++)
-	{
-		ImGui::TreePop();
+			float percentage = (curResult->ElapsedCylces) / (float)cycles;
+			char* name = cbGetLastPosOf('|', curResult->GUID) + 1;
+
+			ImGui::BulletText("%s", name);
+
+			if (!(next && next->Level <= curResult->Level))
+			{
+				ImGui::Indent();
+				currentLevel++;
+			}
+
+			ImGui::NextColumn();
+			ImGui::Text("%-2.6f%%", percentage);
+
+			ImGui::NextColumn();
+		}
+
+		for (uint32 i = 0; i < currentLevel; i++)
+		{
+			ImGui::Unindent();
+		}
+		ImGui::Columns(1);		
 	}
 	ImGui::End();
 
-	free(eventList);
-	
+
+
 }
 
 EXPORT GAME_LOOP(GameLoop)
