@@ -123,6 +123,8 @@ struct event_result
 
 internal void EvaluateDebugInfo()
 {
+	TIMED_FUNCTION();
+
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
 	static float winAlpha = .7f;
 	if (!ImGui::Begin("Function Timings", (bool *)1, ImVec2(0, 0), winAlpha, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
@@ -155,7 +157,7 @@ internal void EvaluateDebugInfo()
 	// Profiling
 	ImGui::Spacing();
 
-	uint32 startIndex = GlobalDebugTable->CurrentIndex;
+	uint64 startIndex = GlobalDebugTable->CurrentIndex;
 	debug_event *start = &GlobalDebugTable->Events[startIndex];
 	Assert(start->Type == FrameStart);
 
@@ -167,11 +169,14 @@ internal void EvaluateDebugInfo()
 
 	// Check how many event there are for this frame
 	uint32 length = 0;
-	while (current->GUID && current->Type != FrameEnd)
+	while (current->Type != FrameEnd)
 	{
+		Assert(current->GUID);
 		SetCurrentToNextElement();
 		length++;
 	}
+
+	uint64 totalCycles = current->Clock - start->Clock;
 
 	Assert(length % 2 == 0); // Else Begin/End mismatch
 
@@ -225,16 +230,50 @@ internal void EvaluateDebugInfo()
 
 
 	// Build Tree
-	uint64 totalCycles = __rdtsc() - start->Clock;
+	currentLevel = 0;
+	event_result *previous = nullptr;
 	for (uint32 i = 0; i < size; i++)
 	{
 		event_result *curResult = &eventList[i];
 		float percentage = (curResult->End->Clock - curResult->Start->Clock) / (float)totalCycles;
 		char* name = cbGetLastPosOf('|', curResult->Start->GUID) + 1;
-		if(ImGui::TreeNode(curResult->Start->GUID, "%s  %-2.6f%%",name, percentage))
+
+		if (previous && previous->Level > curResult->Level)
+		{
+			Assert(currentLevel != 0);
 			ImGui::TreePop();
+			currentLevel--;
+		}
+
+		if (i == size - 1 || eventList[i + 1].Level <= curResult->Level)
+		{
+			ImGui::BulletText("%s  %-2.6f%%", name, percentage);
+		}
+		else if (ImGui::TreeNode(curResult->Start->GUID, "%s  %-2.6f%%", name, percentage))
+		{
+			currentLevel++;			
+		}
+		else
+		{
+			i++;
+			while (i < size)
+			{
+				event_result *candidate = &eventList[i];
+				if (candidate->Level <= curResult->Level)
+				{
+					i--;
+					break;
+				}
+				i++;
+			}
+		}
+		previous = curResult;
 	}
-	
+
+	for (uint32 i = 0; i < currentLevel; i++)
+	{
+		ImGui::TreePop();
+	}
 	ImGui::End();
 
 	free(eventList);
@@ -301,12 +340,12 @@ EXPORT GAME_LOOP(GameLoop)
 	Render(deltaTime, gameState, &renderCommands);
 
 	// Evaluate Timing Info and render with imgui
-	BEGIN_BLOCK("Level1");
-	BEGIN_BLOCK("Level2");
-	BEGIN_BLOCK("Level3");
-	END_BLOCK();
-	END_BLOCK();
-	END_BLOCK();
+	//BEGIN_BLOCK("Level1");
+	//BEGIN_BLOCK("Level2");
+	//BEGIN_BLOCK("Level3");
+	//END_BLOCK();
+	//END_BLOCK();
+	//END_BLOCK();
 	EvaluateDebugInfo();
 
 	// End Imgui Frame

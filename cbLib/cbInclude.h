@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <intrin.h>
 
 #define cbSlow true
 #define cbDebug true
@@ -22,7 +23,7 @@
 #define Pi_2 1.57079632679489661923f
 
 #if cbSlow
-#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
+#define Assert(Expression) if(!(Expression)) {__debugbreak();}
 #else
 #define Assert(Expression) Expression
 #endif
