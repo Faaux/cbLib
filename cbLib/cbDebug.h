@@ -8,6 +8,15 @@ enum debug_type : uint8
 	EndBlock
 };
 
+struct event_result
+{
+	uint64 ElapsedCylces;
+	uint32 Level;
+	uint32 Index;
+	char *GUID;
+};
+
+
 struct debug_event
 {
 	uint64 Clock;

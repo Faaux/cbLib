@@ -113,14 +113,6 @@ internal void Update()
 {
 }
 
-struct event_result
-{
-	uint64 ElapsedCylces;
-	uint32 Level;
-	uint32 Index;
-	char *GUID;
-};
-
 internal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &size)
 {
 	TIMED_FUNCTION();
@@ -225,7 +217,7 @@ internal void EvaluateDebugInfo()
 
 	ImGui::SetNextWindowPos(ImVec2(10, 10));	
 	static float winAlpha = .7f;
-	if (!ImGui::Begin("Information", (bool *)1, ImVec2(400, ImGui::GetIO().DisplaySize.y - 20), winAlpha,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
+	if (!ImGui::Begin("Information", 0, ImVec2(340, ImGui::GetIO().DisplaySize.y - 20), winAlpha,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::End();
 		return;
@@ -254,65 +246,59 @@ internal void EvaluateDebugInfo()
 	ImGui::Spacing();
 
 	// Profiling	
+	static bool didOnce = false;
+	if (!didOnce)
+	{
+		didOnce = true;
+		ImGui::SetNextTreeNodeOpen(true);
+	}
 	if (ImGui::CollapsingHeader("Profiling"))
 	{
 		uint64 cycles;
 		uint32 size;
 		event_result *eventList = ExtractLastFrameInformation(cycles, size);
 
-		static int e = 0;
+		static int e = 0;		
 		ImGui::RadioButton("Sort by %", &e, 0); ImGui::SameLine();
-		ImGui::RadioButton("Sort by Order", &e, 1); ImGui::SameLine();
+		ImGui::RadioButton("Sort by Order", &e, 1); 	
 
+		static bool showFilename = false;
+		static bool showMsEstimate = true;
+		ImGui::Checkbox("Show ms", &showMsEstimate); ImGui::SameLine();
+		ImGui::Checkbox("Show Filename", &showFilename); 
+		
 		if(e == 0)
 		{
 			// Resort by %
 			cbQuicksort(eventList, size, sizeof(event_result), CompareByClock, SwapEventResult);
 		}
 
-		static bool showFilename = false;
-		ImGui::Checkbox("Show Filename", &showFilename);
+		
 		
 
-		const float perc_w = 90.0f;
-		static float name_w = 150.0f;
-		const float h = 400.f;
+		float perc_w = showMsEstimate ? 130.f : 90.0f;
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-		ImGui::BeginChild("p_Perc", ImVec2(perc_w, h), true);
+		ImGui::BeginChild("p_Perc", ImVec2(perc_w, 0), true, ImGuiWindowFlags_NoScrollbar);
 		{
-			ImGui::Text("Percentage %");
+			ImGui::Text("Percentage %%");
+			if (showMsEstimate)
+			{
+				ImGui::SameLine();
+				ImGui::Text(" | ms");
+			}
 			ImGui::Separator();
 		}
 		ImGui::EndChild();
 		ImGui::SameLine();
-		ImGui::InvisibleButton("vsplitter_1", ImVec2(4.0f, h));
+		ImGui::InvisibleButton("vsplitter_1", ImVec2(8.0f, 0));
 
 		ImGui::SameLine();
-		ImGui::BeginChild("p_Name", ImVec2(showFilename ? name_w : 0, h), true);
+		ImGui::BeginChild("p_Name", ImVec2(0,0), true, showFilename ? ImGuiWindowFlags_AlwaysHorizontalScrollbar : 0);
 		{
 			ImGui::Text("Name");
 			ImGui::Separator();
 		}
 		ImGui::EndChild();
-		if (showFilename)
-		{
-			ImGui::SameLine();
-			ImGui::InvisibleButton("vsplitter_2", ImVec2(4.0f, h));
-			if (ImGui::IsItemActive())
-			{
-				name_w += ImGui::GetIO().MouseDelta.x;
-			}
-
-		
-			ImGui::SameLine();
-			ImGui::BeginChild("p_FileName", ImVec2(0, h), true);
-			{
-				ImGui::Text("FileName|Line");
-				ImGui::Separator();
-			}
-			ImGui::EndChild();
-		}
-
 		
 		ImGui::PopStyleVar();
 
@@ -324,20 +310,12 @@ internal void EvaluateDebugInfo()
 		ImGui::BeginChild("p_Name");
 		ImGui::Spacing();
 		ImGui::EndChild();
-
-		if (showFilename)
-		{
-			// #3 Column
-			ImGui::BeginChild("p_FileName");
-			ImGui::Spacing();
-			ImGui::EndChild();
-		}
-
+		
 		for (uint32 index = 0; index < size; index++)
 		{
 			event_result *curResult = &eventList[index];
 
-			float percentage = (curResult->ElapsedCylces) / (float)cycles;
+			float percentage = curResult->ElapsedCylces / (float)cycles * 100;
 
 			char* cursor = cbGetLastPosOf('\\', curResult->GUID) + 1;
 
@@ -368,24 +346,38 @@ internal void EvaluateDebugInfo()
 
 			// #1 Column
 			ImGui::BeginChild("p_Perc");
-			ImGui::Text("%-2.6f%%", percentage);
+			ImGui::Text("%-2.3f%%", percentage);
+			if(showMsEstimate)
+			{
+				ImGui::SameLine(60);
+				ImGui::Text("|");
+				ImGui::SameLine(70);
+				ImGui::Text("%-2.3f", percentage / 100.f * frameTime);
+				
+			}
 			ImGui::EndChild();
 
 			// #2 Column
 			ImGui::BeginChild("p_Name");
 			ImGui::Text("%s", cursor);
+			if (showFilename)
+			{
+				ImGui::SameLine(165);
+				ImGui::Text(" | %s [%s]", fileName, line);
+			}
 			ImGui::EndChild();
 
-			if(showFilename)
-			{
-				// #3 Column
-				ImGui::BeginChild("p_FileName");
-				ImGui::Text("%s | %s", fileName, line);
-				ImGui::EndChild();
-			}
+			
 
 		}
 		ImGui::Columns(1);
+
+		ImGui::BeginChild("p_Name"); // Demonstrate a trick: you can use Begin to set yourself in the context of another window (here we are already out of your child window)
+		float scroll = ImGui::GetScrollY();
+		ImGui::EndChild();
+		ImGui::BeginChild("p_Perc");
+		ImGui::SetScrollY(scroll);
+		ImGui::EndChild();
 	}
 	ImGui::End();
 

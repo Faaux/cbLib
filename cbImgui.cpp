@@ -110,6 +110,8 @@ void InitImGui()
 {
 	ImGuiIO& io = ImGui::GetIO();
 
+	io.Fonts->AddFontFromFileTTF("res/Roboto-Medium.ttf", 13);
+
 	// Set Key Mapping
 	io.KeyMap[ImGuiKey_Tab] = cbKey_TAB;
 	io.KeyMap[ImGuiKey_LeftArrow] = cbKey_LEFTARROW;
