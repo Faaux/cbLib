@@ -25,7 +25,7 @@
 #if _MSC_VER && !__INTEL_COMPILER
 #define Assert(Expression) if(!(Expression)) {__debugbreak();}
 #else
-#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
+#define Assert(Expression) if(!(Expression)) {__builtin_trap();}
 #endif
 #else
 #define Assert(Expression) Expression
