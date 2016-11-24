@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <intrin.h>
 
 #define cbSlow true
 #define cbDebug true
