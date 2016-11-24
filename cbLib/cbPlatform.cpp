@@ -28,33 +28,33 @@ struct Win32GameCode
     game_loop *GameLoop;
     bool IsValid;
 };
-internal HWND _hWindow;
-internal HDC _deviceContext;
-internal LARGE_INTEGER _lastCounter;
-internal uint64 _perfCountFrequency;
-internal float _deltaTime;
-internal float _currentFps;
-internal bool _windowWasResized = false;
-internal uint32 _windowWidth = 1280;
-internal uint32 _windowHeight = 720;
-internal bool _isCloseRequested;
+cbInternal HWND _hWindow;
+cbInternal HDC _deviceContext;
+cbInternal LARGE_INTEGER _lastCounter;
+cbInternal uint64 _perfCountFrequency;
+cbInternal float _deltaTime;
+cbInternal float _currentFps;
+cbInternal bool _windowWasResized = false;
+cbInternal uint32 _windowWidth = 1280;
+cbInternal uint32 _windowHeight = 720;
+cbInternal bool _isCloseRequested;
 
-internal GameInput _gameInput;
+cbInternal GameInput _gameInput;
 
 debug_table *GlobalDebugTable;
 
 
-internal void UpdateKeyState(uint32 vkCode, bool isDown)
+cbInternal void UpdateKeyState(uint32 vkCode, bool isDown)
 {
 	_gameInput.NewKeyboardInput.Keys[vkCode].IsDown = isDown;		
 }
 
-internal void UpdateInputText(char c)
+cbInternal void UpdateInputText(char c)
 {
 	Assert(_gameInput.NewKeyboardInput.CurrentLength < 31);
 	_gameInput.NewKeyboardInput.InputText[_gameInput.NewKeyboardInput.CurrentLength++] = c;
 }
-internal LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+cbInternal LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     LRESULT Result = 0;
 
@@ -103,7 +103,7 @@ internal LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM
     return Result;
 }
 
-internal void Win32InitOpenGL()
+cbInternal void Win32InitOpenGL()
 {
     PIXELFORMATDESCRIPTOR DesiredFormat = {};
     DesiredFormat.nSize = sizeof(PIXELFORMATDESCRIPTOR);
@@ -191,7 +191,7 @@ internal void Win32InitOpenGL()
     }
 }
 
-internal void Win32InitWindowAndOpenGL()
+cbInternal void Win32InitWindowAndOpenGL()
 {
     LARGE_INTEGER perfCount;
     QueryPerformanceFrequency(&perfCount);
@@ -233,7 +233,7 @@ internal void Win32InitWindowAndOpenGL()
     UpdateWindow(_hWindow);
 }
 
-internal float Win32UpdatePlatform(GameInput *input)
+cbInternal float Win32UpdatePlatform(GameInput *input)
 {
 	TIMED_FUNCTION();
 	input->OldMouseInputState = input->NewMouseInputState;
@@ -300,7 +300,7 @@ internal float Win32UpdatePlatform(GameInput *input)
     return _deltaTime;
 }
 
-internal FILETIME GetLastWriteTime(const char *fileName)
+cbInternal FILETIME GetLastWriteTime(const char *fileName)
 {
 	FILETIME result = {};
 
@@ -472,7 +472,7 @@ GET_WIN_SIZE(GetWindowWidth)
     return _windowWidth;
 }
 
-internal Win32GameCode Win32LoadGameCode()
+cbInternal Win32GameCode Win32LoadGameCode()
 {
     Win32GameCode result = {};
 
@@ -524,7 +524,7 @@ internal Win32GameCode Win32LoadGameCode()
     return result;
 }
 
-internal void Win32UnloadGameCode(Win32GameCode *gameCode)
+cbInternal void Win32UnloadGameCode(Win32GameCode *gameCode)
 {
     if (gameCode->GameCodeDLL)
     {
@@ -598,7 +598,7 @@ int main()
 		FRAME_START();
 		BEGIN_BLOCK("Frame");
         FILETIME lastWriteTime = GetLastWriteTime(gameDllName);
-        if (CompareFileTime(&lastWriteTime, &gameCode.LastWriteTime) != 0)
+        if (!gameCode.IsValid || CompareFileTime(&lastWriteTime, &gameCode.LastWriteTime) != 0)
         {
             Win32UnloadGameCode(&gameCode);
             gameCode = Win32LoadGameCode();

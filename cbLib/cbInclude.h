@@ -16,7 +16,7 @@
 #define Megabytes(Value) (Kilobytes(Value) * 1024LL)
 #define Gigabytes(Value) (Megabytes(Value) * 1024LL)
 
-#define internal static
+#define cbInternal static
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
 #define Pi 3.14159265358979323846f

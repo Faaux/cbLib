@@ -21,6 +21,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(cbLib)
 
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/ThirdParty/bin/glew32.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+file(COPY ${CMAKE_CURRENT_LIST_DIR}/ThirdParty/bin/assimp-vc140-mt.dll DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/res DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 file(COPY ${CMAKE_CURRENT_LIST_DIR}/shaders DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 
@@ -36,4 +37,4 @@ set(SHADERS shaders/imgui.f
 
 add_library(cbGame SHARED ${SOURCE} ${SHADERS})
 source_group("shaders" FILES ${SHADERS})
-target_link_libraries(cbGame glew32 opengl32)
+target_link_libraries(cbGame glew32 opengl32 assimp-vc140-mt)

@@ -8,17 +8,20 @@
 #include "GLM.h"
 #include "imgui.h"
 #include "cbImgui.h"
+
 #include <GL/glew.h>
-#include "imgui_internal.h"
+#include <assimp/cimport.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 
 Win32PlatformCode Platform;
 TransientStorage *TransStorage;
 cbConsole *Console;
 debug_table *GlobalDebugTable;
 
-static GLuint bgShaderId;
 
-internal void ProcessRenderCommands(GameState* gameState, RenderCommandGroup* renderCommands)
+cbInternal void ProcessRenderCommands(GameState* gameState, RenderCommandGroup* renderCommands)
 {
 	TIMED_FUNCTION();
 	uint8 * cmdPtr = (uint8*)renderCommands->BufferDataAt;
@@ -45,7 +48,7 @@ internal void ProcessRenderCommands(GameState* gameState, RenderCommandGroup* re
 	}
 }
 
-internal void Render(float deltaTime, GameState* gameState, RenderCommandGroup* renderCommands)
+cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup* renderCommands)
 {
 	TIMED_FUNCTION();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -109,11 +112,85 @@ internal void Render(float deltaTime, GameState* gameState, RenderCommandGroup* 
 	ProcessRenderCommands(gameState, renderCommands);
 }
 
-internal void Update()
+cbInternal void RecursiveMeshLoad(const aiScene *scene, aiNode *rootNode)
 {
+	for (uint32 n = 0; n < rootNode->mNumMeshes; ++n) 
+	{
+		aiMesh* mesh = scene->mMeshes[rootNode->mMeshes[n]];
+
+		// 3 Pos, 3 Normal
+		bool normalsCorrupt = false;
+		const uint32 numVerts = mesh->mNumFaces * 3;
+		float *meshDataOrigin = (float *)malloc(sizeof(float) * (3 + 3) * numVerts);
+		float *meshData = meshDataOrigin;
+		for (uint32 j = 0; j < mesh->mNumFaces; ++j) 
+		{
+			const aiFace* face = &mesh->mFaces[j];
+			GLenum face_mode;
+
+			switch (face->mNumIndices) 
+			{
+				case 1: face_mode = GL_POINTS; break;
+				case 2: face_mode = GL_LINES; break;
+				case 3: face_mode = GL_TRIANGLES; break;
+				default: face_mode = GL_POLYGON; break;
+			}
+
+			Assert(face_mode == GL_TRIANGLES);
+			Assert(face->mNumIndices == 3);
+			for (uint32 i = 0; i < face->mNumIndices; i++) 
+			{
+				int index = face->mIndices[i];
+				*meshData++ = mesh->mVertices[index].x;
+				*meshData++ = mesh->mVertices[index].y;
+				*meshData++ = mesh->mVertices[index].z;
+				
+				
+				if (mesh->mNormals != NULL)
+				{
+					*meshData++ = mesh->mNormals[index].x;
+					*meshData++ = mesh->mNormals[index].y;
+					*meshData++ = mesh->mNormals[index].z;
+				}
+				else
+				{
+					Assert(false);
+					normalsCorrupt = true;
+					*meshData++ = 1.0;
+					*meshData++ = 1.0;
+					*meshData++ = 1.0;
+					*meshData++ = 1.0;
+				}
+			}
+		}
+		free(meshDataOrigin);
+	}
+
+	for (uint32 n = 0; n < rootNode->mNumChildren; ++n) 
+	{
+		RecursiveMeshLoad(scene, rootNode->mChildren[n]);
+	}
 }
 
-internal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &size)
+cbInternal void Update()
+{
+	static bool loadOnce = false;
+	if(!loadOnce)
+	{
+		loadOnce = true;
+		
+		aiLogStream stream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, nullptr);
+		aiAttachLogStream(&stream);
+		
+		const aiScene *scene = aiImportFile("res\\wt_teapot.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+		RecursiveMeshLoad(scene, scene->mRootNode);
+
+		aiReleaseImport(scene);
+		aiDetachAllLogStreams();
+	}
+}
+
+cbInternal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &size)
 {
 	TIMED_FUNCTION();
 
@@ -194,7 +271,7 @@ internal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &size)
 	return eventList;
 }
 
-internal cbQuicksortCompare(CompareByClock)
+cbInternal cbQuicksortCompare(CompareByClock)
 {
 	uint64 lhClock = ((event_result *)lhs)->ElapsedCylces;
 	uint64 rhClock = ((event_result *)rhs)->ElapsedCylces;
@@ -204,14 +281,14 @@ internal cbQuicksortCompare(CompareByClock)
 	return lhClock == rhClock ? 0 : -1;
 }
 
-internal cbSwap(SwapEventResult)
+cbInternal cbSwap(SwapEventResult)
 {
 	event_result tmp = *(event_result *)lhs;
 	*(event_result *)lhs = *(event_result *)rhs;
 	*(event_result *)rhs = tmp;
 }
 
-internal void EvaluateDebugInfo()
+cbInternal void EvaluateDebugInfo()
 {
 	TIMED_FUNCTION();
 
@@ -372,7 +449,7 @@ internal void EvaluateDebugInfo()
 		}
 		ImGui::Columns(1);
 
-		ImGui::BeginChild("p_Name"); // Demonstrate a trick: you can use Begin to set yourself in the context of another window (here we are already out of your child window)
+		ImGui::BeginChild("p_Name");
 		float scroll = ImGui::GetScrollY();
 		ImGui::EndChild();
 		ImGui::BeginChild("p_Perc");

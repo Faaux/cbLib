@@ -31,7 +31,7 @@ void AddLog(cbConsole* console, const char* fmt, ...)
 	console->ScrollToBottom = true;
 }
 
-internal void Clear(cbConsole *console)
+cbInternal void Clear(cbConsole *console)
 {
 	console->CurrentItem = 0;
 	console->FirstItem = 0;
@@ -40,13 +40,13 @@ internal void Clear(cbConsole *console)
 	ZeroSize(ArrayCount(console->Items), console->Items);
 }
 
-internal void Rebuild(cbConsole *console)
+cbInternal void Rebuild(cbConsole *console)
 {
 	char cmdline[] = "cmd.exe /K \"cd .. & del build.txt & build.bat small>> build.txt\"";
 	Platform.RunExternalProgram(cmdline, [](const char * log) { AddLog(Console, "%s\n", log); });
 }
 
-internal cbConsoleCommand _consoleCommands[] =
+cbInternal cbConsoleCommand _consoleCommands[] =
 {
 	{"build", &Rebuild},
 	{"clear", &Clear}
@@ -54,7 +54,7 @@ internal cbConsoleCommand _consoleCommands[] =
 
 
 
-internal void ExecCommand(cbConsole *console, const char* command)
+cbInternal void ExecCommand(cbConsole *console, const char* command)
 {
 	AddLog(console, "# %s\n", command);
 

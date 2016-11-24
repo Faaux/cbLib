@@ -63,7 +63,7 @@ static const char *basicFontFragmentShader = "#version 330 core\n"
                                              "	color = vec4(textColor, alpha);\n"
                                              "};\n";
 
-internal void InitVaoVbo()
+cbInternal void InitVaoVbo()
 {
 #if 0
     glGenVertexArrays(1, &quadVAO);
@@ -81,7 +81,7 @@ internal void InitVaoVbo()
 #endif
 }
 
-internal void InitShader()
+cbInternal void InitShader()
 {
     GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
@@ -129,7 +129,7 @@ internal void InitShader()
     glDeleteShader(fragmentShaderId);
 }
 
-internal void InitTexture(char *fileName)
+cbInternal void InitTexture(char *fileName)
 {
     int width, height;
     uint8 *atlas = Platform.cbLoadImage(fileName, width, height);
@@ -145,7 +145,7 @@ internal void InitTexture(char *fileName)
 	Platform.cbFreeImage(atlas);
 }
 
-internal void LoadSDFMetaData()
+cbInternal void LoadSDFMetaData()
 {
 	FILE *fid;
 	errno_t err = fopen_s(&fid, "Segoe.fnt", "r");
@@ -186,7 +186,7 @@ internal void LoadSDFMetaData()
 	fclose(fid);
 }
 
-internal void InitFont()
+cbInternal void InitFont()
 {
 	static bool wasInit = false;
 	if(!wasInit)
@@ -197,7 +197,7 @@ internal void InitFont()
 	}
 }
 
-internal void InitSDF()
+cbInternal void InitSDF()
 {
 	LoadSDFMetaData();
 	InitTexture("Segoe.png");
@@ -324,7 +324,7 @@ void DrawString(RenderStringData *data)
 	free(firstVertice);
 }
 
-internal void FreeFont()
+cbInternal void FreeFont()
 {
 	glDeleteVertexArrays(1, &quadVAO);
 	glDeleteBuffers(1, &quadVBO);
