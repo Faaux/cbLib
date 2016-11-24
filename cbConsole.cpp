@@ -117,7 +117,7 @@ void AddImguiConsole(cbConsole *console)
 		while (input_end > console->InputBuf && input_end[-1] == ' ') input_end--; *input_end = 0;
 		if (console->InputBuf[0])
 			ExecCommand(console, console->InputBuf);
-		strcpy_s(console->InputBuf, "");
+		strcpy(console->InputBuf, "");
 	}
 
 	if (ImGui::IsItemHovered() || (ImGui::IsRootWindowOrAnyChildFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)))
