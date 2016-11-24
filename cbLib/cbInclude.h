@@ -22,7 +22,11 @@
 #define Pi_2 1.57079632679489661923f
 
 #if cbSlow
+#if _MSC_VER && !__INTEL_COMPILER
 #define Assert(Expression) if(!(Expression)) {__debugbreak();}
+#else
+#define Assert(Expression) if(!(Expression)) {*(int *)0 = 0;}
+#endif
 #else
 #define Assert(Expression) Expression
 #endif

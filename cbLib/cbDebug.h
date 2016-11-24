@@ -40,6 +40,22 @@ struct debug_table
 	debug_event Events[65536];
 };
 
+//  Windows
+#ifdef _WIN32
+#include <intrin.h>
+uint64 rdtsc() {
+	return __rdtsc();
+}
+
+//  Linux/GCC
+#else
+uint64_t rdtsc() {
+	unsigned int lo, hi;
+	__asm__ __volatile__("rdtsc" : "=a" (lo), "=d" (hi));
+	return ((uint64_t)hi << 32) | lo;
+}
+#endif
+
 extern debug_table *GlobalDebugTable;
 
 #define UniqueFileCounterString__(A, B, C, D) A "|" #B "|" #C "|" D
@@ -50,7 +66,7 @@ extern debug_table *GlobalDebugTable;
 												uint32 eventIndex = totalEventIndex & 0xFFFF;					\
 												Assert(eventIndex < ArrayCount(GlobalDebugTable->Events));			\
 												debug_event *Event = &GlobalDebugTable->Events[totalEventIndex >> 32] + eventIndex;			\
-												Event->Clock = __rdtsc();											\
+												Event->Clock = rdtsc();											\
 												Event->Type = EventType;											\
 												Event->GUID = GUIDInit;												\
 												if(EventType == FrameStart) {										\
@@ -71,7 +87,7 @@ extern debug_table *GlobalDebugTable;
 #define FRAME_START() {RecordDebugEvent(FrameStart, DEBUG_NAME("Frame Start"));}
 #define FRAME_END() {RecordDebugEvent(FrameEnd, DEBUG_NAME("Frame End"));}
 
-#include <intrin.h>
+
 struct timed_block
 {
 	timed_block(char *GUID)

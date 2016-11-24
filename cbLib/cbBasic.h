@@ -4,7 +4,7 @@
 
 inline char *cbGetLastPosOf(const char search, const char* toSearch)
 {
-	char *current = nullptr;
+	char *current = 0;
 	while (*toSearch)
 	{
 		if (*toSearch++ == search)
@@ -30,12 +30,12 @@ inline int cbStrCmp(const char* lhs, const char* rhs)
 }
 
 inline char* cbItoA(int i, char b[], mem_size size) {
-	int count = sprintf_s(b, size,"%d", i);
+	int count = sprintf(b,"%d", i);
 	return b + count;
 }
 
 inline char* cbFtoA(float i, char b[], mem_size size) {
-	int count = sprintf_s(b, size, "%f", i);
+	int count = sprintf(b, "%f", i);
 
 	char * end = b + count;
 	*end = 0;

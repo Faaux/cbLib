@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.8)
 project(cbProject)
 
+add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/ThirdParty/include)
 include_directories(${CMAKE_CURRENT_LIST_DIR}/cbLib)

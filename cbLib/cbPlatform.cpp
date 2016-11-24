@@ -154,7 +154,7 @@ cbInternal void Win32InitOpenGL()
         // Find proper Pixel Format
         int pixelFormat;
         uint32 numFormat;
-        wglChoosePixelFormatARB(_deviceContext, pixel_attribs, nullptr, 1, &pixelFormat, &numFormat);
+        wglChoosePixelFormatARB(_deviceContext, pixel_attribs, 0, 1, &pixelFormat, &numFormat);
         suggestedFormat = {};
         DescribePixelFormat(_deviceContext, pixelFormat, sizeof(suggestedFormat), &suggestedFormat);
         SetPixelFormat(_deviceContext, pixelFormat, &suggestedFormat);

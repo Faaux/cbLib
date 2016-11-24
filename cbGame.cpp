@@ -179,7 +179,7 @@ cbInternal void Update()
 	{
 		loadOnce = true;
 		
-		aiLogStream stream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, nullptr);
+		aiLogStream stream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, 0);
 		aiAttachLogStream(&stream);
 		
 		const aiScene *scene = aiImportFile("res\\wt_teapot.obj", aiProcessPreset_TargetRealtime_MaxQuality);
@@ -221,7 +221,7 @@ cbInternal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &siz
 							 // Setup buffers
 	size = length / 2;
 	event_result *eventStack = (event_result *)malloc(size * sizeof(event_result));
-	static event_result *eventList = nullptr;
+	static event_result *eventList = 0;
 	if (eventList)
 		free(eventList);
 	eventList = (event_result *)malloc(size * sizeof(event_result));
@@ -310,7 +310,7 @@ cbInternal void EvaluateDebugInfo()
 	fpsHistory[currentHistory] = frameTime;
 	currentHistory = (currentHistory + 1) % recordHistory;
 
-	ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, nullptr, FLT_MAX, FLT_MAX, ImVec2(0, 80));
+	ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, 0, FLT_MAX, FLT_MAX, ImVec2(0, 80));
 	ImGui::SameLine();
 	ImGui::Text("%s\n%-3.4f\n\n%s\n%-3.4f", "ms/frame", frameTime, "fps", ImGui::GetIO().Framerate);
 
