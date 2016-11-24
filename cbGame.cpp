@@ -183,6 +183,7 @@ cbInternal void Update()
 		aiAttachLogStream(&stream);
 		
 		const aiScene *scene = aiImportFile("res\\wt_teapot.obj", aiProcessPreset_TargetRealtime_MaxQuality);
+		Assert(scene);
 		RecursiveMeshLoad(scene, scene->mRootNode);
 
 		aiReleaseImport(scene);

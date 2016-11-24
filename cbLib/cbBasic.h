@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdio>
+#include <stdio.h>
 #include "cbInclude.h"
 
 inline char *cbGetLastPosOf(const char search, const char* toSearch)
