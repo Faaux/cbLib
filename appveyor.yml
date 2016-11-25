@@ -27,5 +27,5 @@ build:
 # scripts to run before build
 before_build:
   - echo Running cmake...
-  - cd c:\projects\cbLib\build
+  - cd c:\projects\cbLib
   - cmake -G "Visual Studio 14 2015 Win64"
