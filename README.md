@@ -1,3 +1,4 @@
-1. Use Visual Commander command to build.
-2. Dont build on Debug to debug way
-3. Set WorkingDir to $(SolutionDir)bin (for all projects)
+AppVeyor: [![Build status](https://ci.appveyor.com/api/projects/status/evubynh8rg0nreop?svg=true)](https://ci.appveyor.com/project/Faaux/cblib)
+
+- Build: CMake
+- OS: Currently Windows Only
