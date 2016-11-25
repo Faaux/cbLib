@@ -29,3 +29,12 @@ before_build:
   - echo Running cmake...
   - cd c:\projects\cbLib
   - cmake -G "Visual Studio 14 2015 Win64"
+  
+after_build:
+  - cd c:\projects\cbLib\bin
+  - 7z a c:\projects\cbLib\build.zip * -tzip
+  - cd c:\projects\cbLib
+
+artifacts:
+  - path: build.zip
+    name: build.zip
