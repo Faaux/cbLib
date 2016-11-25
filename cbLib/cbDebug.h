@@ -43,7 +43,7 @@ struct debug_table
 //  Windows
 #ifdef _WIN32
 #include <intrin.h>
-uint64 rdtsc() {
+inline uint64 rdtsc() {
 	return __rdtsc();
 }
 
