@@ -1,6 +1,3 @@
-environment:
-  P: "c:/projects/"
-
 # branches to build
 branches:
   # whitelist
@@ -30,6 +27,5 @@ build:
 # scripts to run before build
 before_build:
   - echo Running cmake...
-  - IF NOT EXIST "c:\projects\cbLib\build" mkdir "c:\projects\cbLib\build"
   - cd c:\projects\cbLib\build
-  - cmake -G "Visual Studio 14 2015 Win64" ..
+  - cmake -G "Visual Studio 14 2015 Win64"
