@@ -122,15 +122,13 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 		100.0f
 	);
 
-	static glm::vec3 camPos(0, 5, 10);
-	ImGui::DragFloat3("Camera Pos: ", &camPos.x, .1f, 0, 4);
+	static glm::vec3 camPos(1, 2, 1);
+	ImGui::DragFloat3("Camera Pos", &camPos.x, .1f, 0.01f, 4);
 	viewMatrix = glm::lookAt(
 		camPos,
 		glm::vec3(0, 0, 0), 
 		glm::vec3(0, 1, 0)  
 	);
-
-	glm::mat4 mvpMatrix = projectionMatrix * viewMatrix * modelMatrix;
 
 	cbUseProgram(program);
 

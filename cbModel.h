@@ -164,7 +164,7 @@ inline void cbDeleteModel(cbModel *model)
 
 inline void cbRenderModel(cbModel *model)
 {
-	glEnable(GL_DEPTH_TEST);
+	//glEnable(GL_DEPTH_TEST);
 	Assert(model->IsValid);
 	for (uint32 i = 0; i < model->meshCount; i++)
 	{
