@@ -21,7 +21,7 @@
 #define Pi 3.14159265358979323846f
 #define Pi_2 1.57079632679489661923f
 
-#if cbSlow
+#if _DEBUG
 #if _MSC_VER && !__INTEL_COMPILER
 #define Assert(Expression) if(!(Expression)) {__debugbreak();}
 #else
@@ -30,6 +30,9 @@
 #else
 #define Assert(Expression) Expression
 #endif
+
+// IN BYTES
+#define BUFFER_OFFSET(i) ((char *)0 + (i))
 
 typedef uint32_t uint;
 

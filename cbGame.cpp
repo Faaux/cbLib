@@ -8,11 +8,10 @@
 #include "GLM.h"
 #include "imgui.h"
 #include "cbImgui.h"
+#include "cbModel.h"
 
 #include <GL/glew.h>
-#include <assimp/cimport.h>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
+
 
 
 Win32PlatformCode Platform;
@@ -53,7 +52,7 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 	TIMED_FUNCTION();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-#if 1
+#if 0
 	static bool isInit = false;
 	static GLuint bgQuadVAO;
 	static GLuint bgQuadVBO;
@@ -108,87 +107,53 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 #endif
+#if 1
+	static cbModel *model = cbLoadModel("res\\wt_teapot.obj");
+	static cbShaderProgram* program = cbCreateProgram("shaders\\model.v", "shaders\\model.f");
+
+
+	static glm::mat4 modelMatrix(1.f);
+	static glm::mat4 viewMatrix;
+	static float aspectRatio = (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight();
+	static glm::mat4 projectionMatrix = glm::perspective(
+		glm::radians(60.0f),
+		aspectRatio,
+		0.1f,
+		100.0f
+	);
+
+	static glm::vec3 camPos(0, 5, 10);
+	ImGui::DragFloat3("Camera Pos: ", &camPos.x, .1f, 0, 4);
+	viewMatrix = glm::lookAt(
+		camPos,
+		glm::vec3(0, 0, 0), 
+		glm::vec3(0, 1, 0)  
+	);
+
+	glm::mat4 mvpMatrix = projectionMatrix * viewMatrix * modelMatrix;
+
+	cbUseProgram(program);
+
+	GLuint projLoc = cbGetUniformLocation(program, "modelMatrix");
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &modelMatrix[0][0]);
+
+	projLoc = cbGetUniformLocation(program, "viewMatrix");
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+
+	projLoc = cbGetUniformLocation(program, "projectionMatrix");
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+
+	cbRenderModel(model);
+
+
+#endif
 
 	ProcessRenderCommands(gameState, renderCommands);
 }
 
-cbInternal void RecursiveMeshLoad(const aiScene *scene, aiNode *rootNode)
-{
-	for (uint32 n = 0; n < rootNode->mNumMeshes; ++n) 
-	{
-		aiMesh* mesh = scene->mMeshes[rootNode->mMeshes[n]];
-
-		// 3 Pos, 3 Normal
-		bool normalsCorrupt = false;
-		const uint32 numVerts = mesh->mNumFaces * 3;
-		float *meshDataOrigin = (float *)malloc(sizeof(float) * (3 + 3) * numVerts);
-		float *meshData = meshDataOrigin;
-		for (uint32 j = 0; j < mesh->mNumFaces; ++j) 
-		{
-			const aiFace* face = &mesh->mFaces[j];
-			GLenum face_mode;
-
-			switch (face->mNumIndices) 
-			{
-				case 1: face_mode = GL_POINTS; break;
-				case 2: face_mode = GL_LINES; break;
-				case 3: face_mode = GL_TRIANGLES; break;
-				default: face_mode = GL_POLYGON; break;
-			}
-
-			Assert(face_mode == GL_TRIANGLES);
-			Assert(face->mNumIndices == 3);
-			for (uint32 i = 0; i < face->mNumIndices; i++) 
-			{
-				int index = face->mIndices[i];
-				*meshData++ = mesh->mVertices[index].x;
-				*meshData++ = mesh->mVertices[index].y;
-				*meshData++ = mesh->mVertices[index].z;
-				
-				
-				if (mesh->mNormals != NULL)
-				{
-					*meshData++ = mesh->mNormals[index].x;
-					*meshData++ = mesh->mNormals[index].y;
-					*meshData++ = mesh->mNormals[index].z;
-				}
-				else
-				{
-					Assert(false);
-					normalsCorrupt = true;
-					*meshData++ = 1.0;
-					*meshData++ = 1.0;
-					*meshData++ = 1.0;
-					*meshData++ = 1.0;
-				}
-			}
-		}
-		free(meshDataOrigin);
-	}
-
-	for (uint32 n = 0; n < rootNode->mNumChildren; ++n) 
-	{
-		RecursiveMeshLoad(scene, rootNode->mChildren[n]);
-	}
-}
-
 cbInternal void Update()
 {
-	static bool loadOnce = false;
-	if(!loadOnce)
-	{
-		loadOnce = true;
-		
-		aiLogStream stream = aiGetPredefinedLogStream(aiDefaultLogStream_STDOUT, 0);
-		aiAttachLogStream(&stream);
-		
-		const aiScene *scene = aiImportFile("res\\wt_teapot.obj", aiProcessPreset_TargetRealtime_MaxQuality);
-		Assert(scene);
-		RecursiveMeshLoad(scene, scene->mRootNode);
 
-		aiReleaseImport(scene);
-		aiDetachAllLogStreams();
-	}
 }
 
 cbInternal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &size)
@@ -277,7 +242,7 @@ cbInternal cbQuicksortCompare(CompareByClock)
 	uint64 lhClock = ((event_result *)lhs)->ElapsedCylces;
 	uint64 rhClock = ((event_result *)rhs)->ElapsedCylces;
 
-	if(lhClock < rhClock)
+	if (lhClock < rhClock)
 		return 1;
 	return lhClock == rhClock ? 0 : -1;
 }
@@ -293,9 +258,9 @@ cbInternal void EvaluateDebugInfo()
 {
 	TIMED_FUNCTION();
 
-	ImGui::SetNextWindowPos(ImVec2(10, 10));	
+	ImGui::SetNextWindowPos(ImVec2(10, 10));
 	static float winAlpha = .7f;
-	if (!ImGui::Begin("Information", 0, ImVec2(340, ImGui::GetIO().DisplaySize.y - 20), winAlpha,  ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
+	if (!ImGui::Begin("Information", 0, ImVec2(340, ImGui::GetIO().DisplaySize.y - 20), winAlpha, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
 	{
 		ImGui::End();
 		return;
@@ -336,23 +301,23 @@ cbInternal void EvaluateDebugInfo()
 		uint32 size;
 		event_result *eventList = ExtractLastFrameInformation(cycles, size);
 
-		static int e = 0;		
+		static int e = 0;
 		ImGui::RadioButton("Sort by %", &e, 0); ImGui::SameLine();
-		ImGui::RadioButton("Sort by Order", &e, 1); 	
+		ImGui::RadioButton("Sort by Order", &e, 1);
 
 		static bool showFilename = false;
 		static bool showMsEstimate = true;
 		ImGui::Checkbox("Show ms", &showMsEstimate); ImGui::SameLine();
-		ImGui::Checkbox("Show Filename", &showFilename); 
-		
-		if(e == 0)
+		ImGui::Checkbox("Show Filename", &showFilename);
+
+		if (e == 0)
 		{
 			// Resort by %
 			cbQuicksort(eventList, size, sizeof(event_result), CompareByClock, SwapEventResult);
 		}
 
-		
-		
+
+
 
 		float perc_w = showMsEstimate ? 130.f : 90.0f;
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
@@ -371,13 +336,13 @@ cbInternal void EvaluateDebugInfo()
 		ImGui::InvisibleButton("vsplitter_1", ImVec2(8.0f, 0));
 
 		ImGui::SameLine();
-		ImGui::BeginChild("p_Name", ImVec2(0,0), true, showFilename ? ImGuiWindowFlags_AlwaysHorizontalScrollbar : 0);
+		ImGui::BeginChild("p_Name", ImVec2(0, 0), true, showFilename ? ImGuiWindowFlags_AlwaysHorizontalScrollbar : 0);
 		{
 			ImGui::Text("Name");
 			ImGui::Separator();
 		}
 		ImGui::EndChild();
-		
+
 		ImGui::PopStyleVar();
 
 		ImGui::BeginChild("p_Perc");
@@ -388,7 +353,7 @@ cbInternal void EvaluateDebugInfo()
 		ImGui::BeginChild("p_Name");
 		ImGui::Spacing();
 		ImGui::EndChild();
-		
+
 		for (uint32 index = 0; index < size; index++)
 		{
 			event_result *curResult = &eventList[index];
@@ -420,18 +385,18 @@ cbInternal void EvaluateDebugInfo()
 			cursor++;
 
 			// Skip Cursor Pos
-			while (*cursor++ != '|'){}			
+			while (*cursor++ != '|') {}
 
 			// #1 Column
 			ImGui::BeginChild("p_Perc");
 			ImGui::Text("%-2.3f%%", percentage);
-			if(showMsEstimate)
+			if (showMsEstimate)
 			{
 				ImGui::SameLine(60);
 				ImGui::Text("|");
 				ImGui::SameLine(70);
 				ImGui::Text("%-2.3f", percentage / 100.f * frameTime);
-				
+
 			}
 			ImGui::EndChild();
 
@@ -445,7 +410,7 @@ cbInternal void EvaluateDebugInfo()
 			}
 			ImGui::EndChild();
 
-			
+
 
 		}
 		ImGui::Columns(1);
@@ -502,6 +467,12 @@ EXPORT GAME_LOOP(GameLoop)
 		InitArena(&shaderArena, shaderArenaSize, currentMemoryLocation);
 		TransStorage->ShaderArena = shaderArena;
 		currentMemoryLocation += shaderArenaSize;
+
+		cbArena meshArena;
+		mem_size meshArenaSize = Kilobytes(256);
+		InitArena(&meshArena, meshArenaSize, currentMemoryLocation);
+		TransStorage->ModelArena = meshArena;
+		currentMemoryLocation += meshArenaSize;
 
 		InitImGui();
 

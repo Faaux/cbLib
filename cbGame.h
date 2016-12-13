@@ -18,6 +18,7 @@ struct TransientStorage
 	bool IsInitialized;
 	cbArena RenderGroupArena;
 	cbArena ShaderArena;
+	cbArena ModelArena;
 };
 
 

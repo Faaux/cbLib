@@ -35,7 +35,9 @@ file(GLOB SOURCE
 set(SHADERS shaders/imgui.f
 			shaders/imgui.v
 			shaders/noise.f
-			shaders/noise.v)
+			shaders/noise.v
+			shaders/model.f
+			shaders/model.v)
 
 add_library(cbGame SHARED ${SOURCE} ${SHADERS})
 source_group("shaders" FILES ${SHADERS})
