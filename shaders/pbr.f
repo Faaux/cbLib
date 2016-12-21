@@ -85,8 +85,8 @@ void main()
 	// IBL lighting
     vec2 brdf = texture2D(iblbrdf, vec2(roughness, 1.0 - NdV)).xy;
     vec3 iblspec = min(vec3(0.99), fresnel_factor(specular, NdV) * brdf.x + brdf.y);
-    //reflected_light += iblspec * vec3(0.7,0.7,0.7);
-    diffuse_light += vec3(0.0,0,0) * (1.0 / PI);
+    reflected_light += iblspec * vec3(0.1);
+    diffuse_light += vec3(0.3) * (1.0 / PI);
 
 	vec3 result = diffuse_light * mix(base, vec3(0.0), metallic) + reflected_light;
 
