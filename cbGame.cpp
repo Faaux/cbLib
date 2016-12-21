@@ -108,8 +108,8 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 	glBindVertexArray(0);
 #endif
 #if 1
-	static cbModel *model = cbLoadModel("res\\models\\tree\\Export.obj");
-	static cbShaderProgram* program = cbCreateProgram("shaders\\model.v", "shaders\\model.f");
+	static cbModel *model = cbLoadModel("res\\models\\sub\\model\\model.dae");
+	static cbShaderProgram* program = cbCreateProgram("shaders\\pbr.v", "shaders\\pbr.f");
 
 
 	static glm::mat4 modelMatrix(1.f);
@@ -122,10 +122,10 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 		10000.0f
 	);
 
-	static glm::vec3 camPos(1, 500, 1);
+	static glm::vec3 camPos(1, 3, 1);
 	static float rotInDegree = 0;
-	static float distance = 700.f;
-	static float stepSize = 10;
+	static float distance = 3.f;
+	static float stepSize = 1;
 
 	ImGui::DragFloat("StepSize", &stepSize);
 	ImGui::DragFloat("Height", &camPos.y, stepSize);
@@ -139,6 +139,7 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 	ImGui::Text("X: %f", camPos.x);
 	ImGui::Text("Z: %f", camPos.z);
 
+
 	viewMatrix = glm::lookAt(
 		camPos,
 		glm::vec3(0, 0.3f, 0),
@@ -147,16 +148,27 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 
 	cbUseProgram(program);
 
-	GLuint projLoc = cbGetUniformLocation(program, "modelMatrix");
-	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &modelMatrix[0][0]);
+	static glm::vec3 lightPos(0, 1, 0);
+	static float accum = 0;
+	accum += deltaTime;
+	if (accum > 2 * Pi)
+		accum -= 2 * Pi;
+	lightPos.x = cos(accum) * 4;
+	lightPos.z = sin(accum) * 4;
 
-	projLoc = cbGetUniformLocation(program, "viewMatrix");
-	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+	GLuint lightLoc = cbGetUniformLocation(program, "lightPos");
+	glUniform3f(lightLoc, lightPos.x, lightPos.y, lightPos.z);
 
-	projLoc = cbGetUniformLocation(program, "projectionMatrix");
+	GLuint modelLoc = cbGetUniformLocation(program, "modelMatrix");
+	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &modelMatrix[0][0]);
+
+	GLuint viewLoc = cbGetUniformLocation(program, "viewMatrix");
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+
+	GLuint projLoc = cbGetUniformLocation(program, "projectionMatrix");
 	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
 
-	cbRenderModel(model);
+	cbRenderModel(program, model);
 
 
 #endif

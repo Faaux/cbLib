@@ -37,7 +37,9 @@ set(SHADERS shaders/imgui.f
 			shaders/noise.f
 			shaders/noise.v
 			shaders/model.f
-			shaders/model.v)
+			shaders/model.v
+			shaders/pbr.f
+			shaders/pbr.v)
 
 add_library(cbGame SHARED ${SOURCE} ${SHADERS})
 source_group("shaders" FILES ${SHADERS})

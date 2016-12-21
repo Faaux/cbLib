@@ -49,6 +49,7 @@ inline cbMesh *cbUploadMesh(cbMesh *mesh, void *data, mem_size size, uint32 *ind
 
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 	glBindVertexArray(0);
 
 	glGenBuffers(1, &mesh->EAB);
@@ -74,17 +75,6 @@ inline void RecursiveMeshLoad_(const aiScene *scene, aiNode *rootNode, cbModel *
 
 		cbMesh *mesh = &model->meshes[meshIndex++];		
 
-		// Get Texture Data
-		aiMaterial *mat = scene->mMaterials[aiMesh->mMaterialIndex];
-		aiString str;
-		mat->GetTexture(aiTextureType_DIFFUSE, 0, &str);
-		mat->GetTexture(aiTextureType_AMBIENT, 0, &str);
-		mat->GetTexture(aiTextureType_SPECULAR, 0, &str);
-
-		aiColor3D color(0.f, 0.f, 0.f);
-		mat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-		mat->Get(AI_MATKEY_COLOR_SPECULAR, color);
-		mat->Get(AI_MATKEY_COLOR_AMBIENT, color);
 
 		// Get Vertex Data
 		// 3 Pos, 3 Normal, 2 UV
@@ -121,10 +111,11 @@ inline void RecursiveMeshLoad_(const aiScene *scene, aiNode *rootNode, cbModel *
 			if (aiMesh->mTextureCoords[0])
 			{
 				*meshData++ = pUv->x;
-				*meshData++ = pUv->y;
+				*meshData++ = -pUv->y;
 			}
 			else
 			{
+				Assert(false);
 				mesh->HasUV = false;
 				*meshData++ = 1.0;
 				*meshData++ = 1.0;
@@ -206,11 +197,110 @@ inline void cbDeleteModel(cbModel *model)
 	}
 }
 
-inline void cbRenderModel(cbModel *model)
+inline void cbRenderModel(cbShaderProgram* program, cbModel *model)
 {
-	//glEnable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 	Assert(model->IsValid);
+
+	// Just for now, debug, load textures here and check rendering
+	
+
+	static GLuint albedoId = 12345678;
+	if(albedoId == 12345678)
+	{
+		int width, height;
+		uint8 *albedo = Platform.cbLoadImage("res\\models\\sub\\model\\textures\\Sphere_albedo.jpg", width, height);
+
+		glGenTextures(1, &albedoId);
+		glBindTexture(GL_TEXTURE_2D, albedoId);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, albedo);
+		// can free temp_bitmap at this point
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		Platform.cbFreeImage(albedo);
+
+	}
+
+	static GLuint metallicId = 12345678;
+	if (metallicId == 12345678)
+	{
+		int width, height;
+		uint8 *metallic = Platform.cbLoadImage("res\\models\\sub\\model\\textures\\Sphere_metallic.jpg", width, height);
+
+		glGenTextures(1, &metallicId);
+		glBindTexture(GL_TEXTURE_2D, metallicId);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, metallic);
+		// can free temp_bitmap at this point
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		Platform.cbFreeImage(metallic);
+
+	}
+
+	static GLuint roughnessId = 12345678;
+	if (roughnessId == 12345678)
+	{
+		int width, height;
+		uint8 *roughness = Platform.cbLoadImage("res\\models\\sub\\model\\textures\\Sphere_roughness.jpg", width, height);
+
+		glGenTextures(1, &roughnessId);
+		glBindTexture(GL_TEXTURE_2D, roughnessId);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, roughness);
+		// can free temp_bitmap at this point
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		Platform.cbFreeImage(roughness);
+	}
+
+	static GLuint iblbrdfId = 12345678;
+	if (iblbrdfId == 12345678)
+	{
+		int width, height;
+		uint8 *normal = Platform.cbLoadImage("res\\models\\sub\\model\\textures\\Sphere_normal.jpg", width, height);
+
+		glGenTextures(1, &iblbrdfId);
+		glBindTexture(GL_TEXTURE_2D, iblbrdfId);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, normal);
+		// can free temp_bitmap at this point
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		Platform.cbFreeImage(normal);
+	}
+
+	GLuint texLoc = cbGetUniformLocation(program, "albedoTex");
+	glUniform1i(texLoc, 0);
+
+	texLoc = cbGetUniformLocation(program, "metallicTex");
+	glUniform1i(texLoc, 1);
+
+	texLoc = cbGetUniformLocation(program, "roughnessTex");
+	glUniform1i(texLoc, 2);
+
+	texLoc = cbGetUniformLocation(program, "iblbrdf");
+	glUniform1i(texLoc, 3);
+
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, albedoId);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, metallicId);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, roughnessId);
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, iblbrdfId);
+
 	for (uint32 i = 0; i < model->meshCount; i++)
 	{
 		cbMesh* current = &model->meshes[i];

@@ -14,7 +14,7 @@ out vec3 toEye;
 out vec3 lightDirection;
 out float distance;
 
-const vec3 lightPos		=	vec3(1.0,300.0,0);
+uniform  vec3 lightPos;//		=	vec3(0,1,3);
 
 void main()
 {
