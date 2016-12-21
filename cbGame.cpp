@@ -108,7 +108,7 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 	glBindVertexArray(0);
 #endif
 #if 1
-	static cbModel *model = cbLoadModel("res\\wt_teapot.obj");
+	static cbModel *model = cbLoadModel("res\\models\\tree\\Export.obj");
 	static cbShaderProgram* program = cbCreateProgram("shaders\\model.v", "shaders\\model.f");
 
 
@@ -119,15 +119,30 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 		glm::radians(60.0f),
 		aspectRatio,
 		0.1f,
-		100.0f
+		10000.0f
 	);
 
-	static glm::vec3 camPos(1, 2, 1);
-	ImGui::DragFloat3("Camera Pos", &camPos.x, .1f, 0.01f, 4);
+	static glm::vec3 camPos(1, 500, 1);
+	static float rotInDegree = 0;
+	static float distance = 700.f;
+	static float stepSize = 10;
+
+	ImGui::DragFloat("StepSize", &stepSize);
+	ImGui::DragFloat("Height", &camPos.y, stepSize);
+	ImGui::DragFloat("Rotation", &rotInDegree, 1.0f, 0.f, 360.f);
+	ImGui::DragFloat("Distance", &distance, stepSize);
+
+	float radians = glm::radians(rotInDegree);
+	camPos.x = cos(radians) * distance;
+	camPos.z = sin(radians) * distance;
+
+	ImGui::Text("X: %f", camPos.x);
+	ImGui::Text("Z: %f", camPos.z);
+
 	viewMatrix = glm::lookAt(
 		camPos,
-		glm::vec3(0, 0, 0), 
-		glm::vec3(0, 1, 0)  
+		glm::vec3(0, 0.3f, 0),
+		glm::vec3(0, 1, 0)
 	);
 
 	cbUseProgram(program);
@@ -269,9 +284,16 @@ cbInternal void EvaluateDebugInfo()
 	const int recordHistory = 200;
 	static int currentHistory = 0;
 	static float* fpsHistory = (float *)malloc(recordHistory * sizeof(float));
-
-	fpsHistory[currentHistory] = frameTime;
-	currentHistory = (currentHistory + 1) % recordHistory;
+	static int ticker = 0;
+	static float frameTimeBuffer = 0;
+	frameTimeBuffer += frameTime;
+	if (ticker++ % 5 == 0)
+	{
+		fpsHistory[currentHistory] = frameTimeBuffer / 5.f;
+		currentHistory = (currentHistory + 1) % recordHistory;
+		ticker = 0;
+		frameTimeBuffer = 0.f;
+	}
 
 	ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, 0, FLT_MAX, FLT_MAX, ImVec2(0, 80));
 	ImGui::SameLine();
@@ -466,11 +488,12 @@ EXPORT GAME_LOOP(GameLoop)
 		TransStorage->ShaderArena = shaderArena;
 		currentMemoryLocation += shaderArenaSize;
 
-		cbArena meshArena;
-		mem_size meshArenaSize = Kilobytes(256);
-		InitArena(&meshArena, meshArenaSize, currentMemoryLocation);
-		TransStorage->ModelArena = meshArena;
-		currentMemoryLocation += meshArenaSize;
+		cbArena modelArena;
+		mem_size modelArenaSize = Kilobytes(256);
+		InitArena(&modelArena, modelArenaSize, currentMemoryLocation);
+		TransStorage->ModelArena = modelArena;
+		cbInitModelTable(&TransStorage->ModelArena);
+		currentMemoryLocation += modelArenaSize;
 
 		InitImGui();
 

@@ -8,10 +8,10 @@ in float distance;
 out vec3 color;
 
 const vec3 lightColor = vec3(1.0,0.0,0.0);
-const float lightPower = 1.7;
+const float lightPower = 20000;
 const vec3 materialDiffuse = vec3(1.0,1.0,1.0);
 const vec3 materialSpecular = vec3(1.0,1.0,1.0);
-const float ambientStrength = 0.02;
+const float ambientStrength = 0.1;
 
 void main()
 {
