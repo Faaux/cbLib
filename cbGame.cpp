@@ -11,7 +11,7 @@
 #include "cbModel.h"
 
 #include <GL/glew.h>
-
+#include "cbCamera.h"
 
 
 Win32PlatformCode Platform;
@@ -109,66 +109,34 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 #endif
 #if 1
 	static cbModel *model = cbLoadModel("res\\models\\sub\\model\\model.dae");
-	static cbShaderProgram* program = cbCreateProgram("shaders\\pbr.v", "shaders\\pbr.f");
+	static cbShaderProgram* pbrProgram = cbCreateProgram("shaders\\pbr.v", "shaders\\pbr.f");
 
 
 	static glm::mat4 modelMatrix(1.f);
-	static glm::mat4 viewMatrix;
-	static float aspectRatio = (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight();
-	static glm::mat4 projectionMatrix = glm::perspective(
-		glm::radians(60.0f),
-		aspectRatio,
-		0.1f,
-		10000.0f
-	);
 
-	static glm::vec3 camPos(1, 3, 1);
-	static float rotInDegree = 0;
-	static float distance = 3.f;
-	static float stepSize = 1;
-
-	ImGui::DragFloat("StepSize", &stepSize);
-	ImGui::DragFloat("Height", &camPos.y, stepSize);
-	ImGui::DragFloat("Rotation", &rotInDegree, 1.0f, 0.f, 360.f);
-	ImGui::DragFloat("Distance", &distance, stepSize);
-
-	float radians = glm::radians(rotInDegree);
-	camPos.x = cos(radians) * distance;
-	camPos.z = sin(radians) * distance;
-
-	ImGui::Text("X: %f", camPos.x);
-	ImGui::Text("Z: %f", camPos.z);
-
-
-	viewMatrix = glm::lookAt(
-		camPos,
-		glm::vec3(0, 0.3f, 0),
-		glm::vec3(0, 1, 0)
-	);
-
-	cbUseProgram(program);
+	cbUseProgram(pbrProgram);
 
 	static glm::vec3 lightPos(0, 1, 0);
-	static float accum = 0;
-	accum += deltaTime;
-	if (accum > 2 * Pi)
-		accum -= 2 * Pi;
-	lightPos.x = cos(accum) * 4;
-	lightPos.z = sin(accum) * 4;
+	static float accum2 = 0;
+	accum2 += deltaTime;
+	if (accum2 > 2 * Pi)
+		accum2 -= 2 * Pi;
+	lightPos.x = cos(accum2) * 4;
+	lightPos.z = sin(accum2) * 4;
 
-	GLuint lightLoc = cbGetUniformLocation(program, "lightPos");
+	GLuint lightLoc = cbGetUniformLocation(pbrProgram, "lightPos");
 	glUniform3f(lightLoc, lightPos.x, lightPos.y, lightPos.z);
 
-	GLuint modelLoc = cbGetUniformLocation(program, "modelMatrix");
+	GLuint modelLoc = cbGetUniformLocation(pbrProgram, "modelMatrix");
 	glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &modelMatrix[0][0]);
 
-	GLuint viewLoc = cbGetUniformLocation(program, "viewMatrix");
-	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &viewMatrix[0][0]);
+	GLuint viewLoc = cbGetUniformLocation(pbrProgram, "viewMatrix");
+	glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &gameState->Camera->GetViewMatrix()[0][0]);
 
-	GLuint projLoc = cbGetUniformLocation(program, "projectionMatrix");
-	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+	GLuint projLoc = cbGetUniformLocation(pbrProgram, "projectionMatrix");
+	glUniformMatrix4fv(projLoc, 1, GL_FALSE, &gameState->Camera->GetProjectionMatrix()[0][0]);
 
-	cbRenderModel(program, model);
+	cbRenderModel(pbrProgram, model);
 
 
 #endif
@@ -176,9 +144,9 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 	ProcessRenderCommands(gameState, renderCommands);
 }
 
-cbInternal void Update()
+cbInternal void Update(float deltaTime, GameState* gameState, GameInput *input)
 {
-
+	gameState->Camera->Update(deltaTime, input);
 }
 
 cbInternal event_result *ExtractLastFrameInformation(uint64 &cycles, uint32 &size)
@@ -463,6 +431,8 @@ cbInternal void EvaluateDebugInfo()
 EXPORT GAME_LOOP(GameLoop)
 {
 	GlobalDebugTable = gameMemory->GlobalDebugTable;
+	Platform = gameMemory->Platform;
+
 	TIMED_FUNCTION();
 	GameState* gameState = (GameState*)gameMemory->PermanentStorage;
 	if (!gameState->IsInitialized)
@@ -475,10 +445,12 @@ EXPORT GAME_LOOP(GameLoop)
 		gameState->IsInitialized = true;
 
 		gameState->Console = PushStruct(&gameState->Arena, cbConsole);
+		gameState->Camera = PushStruct(&gameState->Arena, Camera);
+		*(gameState->Camera) = Camera(60.f, 0.1f, 100.f, (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight(), glm::vec3(3,3,0), glm::vec3(0.f, 0.3f, 0.f));
 	}
 
 	Console = gameState->Console;
-	Platform = gameMemory->Platform;
+	
 
 
 	TransStorage = (TransientStorage *)gameMemory->TransientStorage;
@@ -516,10 +488,12 @@ EXPORT GAME_LOOP(GameLoop)
 		gameState->Console->IsVisible = !gameState->Console->IsVisible;
 	}
 	UpdateImgui(deltaTime, input);
-	Update();
 
 	// Start Imgui Frame
 	ImGui::NewFrame();
+	
+	Update(deltaTime, gameState, input);
+		
 	//ImGui::ShowTestWindow();
 	AddImguiConsole(gameState->Console);
 

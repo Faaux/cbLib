@@ -3,6 +3,7 @@
 #include "cbPlatform.h"
 #include "cbMemory.h"
 #include "cbConsole.h"
+#include "cbCamera.h"
 
 
 struct GameState
@@ -11,6 +12,7 @@ struct GameState
 	mem_size ArenaSize;
 	cbArena Arena;
 	cbConsole* Console;
+	Camera* Camera;
 };
 
 struct TransientStorage
