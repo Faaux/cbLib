@@ -146,6 +146,21 @@ cbInternal void Render(float deltaTime, GameState* gameState, RenderCommandGroup
 
 cbInternal void Update(float deltaTime, GameState* gameState, GameInput *input)
 {
+	static glm::quat rot = gameState->Camera->_currentRot;
+	static glm::vec3 pos = gameState->Camera->_position;
+
+	if (SINGLE_PRESS(input, cbKey_F9))
+	{
+		rot = gameState->Camera->_currentRot;
+		pos = gameState->Camera->_position;
+	}
+
+	if (SINGLE_PRESS(input, cbKey_F8))
+	{
+		AddLog(Console, "Started Transition");
+		gameState->Camera->TransitionTo(rot, pos, 3.f);
+	}
+
 	gameState->Camera->Update(deltaTime, input);
 }
 
@@ -456,7 +471,7 @@ EXPORT GAME_LOOP(GameLoop)
 
 		gameState->Console = PushStruct(&gameState->Arena, cbConsole);
 		gameState->Camera = PushStruct(&gameState->Arena, Camera);
-		*(gameState->Camera) = Camera(60.f, 0.1f, 100.f, (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight(), glm::vec3(2, 2, 2), glm::vec3(0.f, 0.0f, 0.f));
+		*(gameState->Camera) = Camera(60.f, 0.1f, 100.f, (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight(), glm::vec3(2, 0, 0), glm::vec3(0.f, 0.0f, 0.f));
 	}
 
 	Console = gameState->Console;

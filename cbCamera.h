@@ -35,15 +35,21 @@ public:
 
 	void Update(float deltaTime, GameInput *input);
 
-private:
+	void TransitionTo(glm::quat rot, glm::vec3 pos, float delta);
+
+public:
 
 	void CalculateViewMatrix();
 
+	bool _isTransitioning;
 	float _fov, _near, _far;
+	float _transitionDelta;
 
 	glm::quat _currentRot;
+	glm::quat _targetRot;
 	glm::vec3 _forward, _right;
 	glm::vec3 _position;
+	glm::vec3 _targetPos;
 	glm::mat4 _viewMatrix;
 	glm::mat4 _projectionMatrix;
 };
