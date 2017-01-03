@@ -446,7 +446,7 @@ EXPORT GAME_LOOP(GameLoop)
 
 		gameState->Console = PushStruct(&gameState->Arena, cbConsole);
 		gameState->Camera = PushStruct(&gameState->Arena, Camera);
-		*(gameState->Camera) = Camera(60.f, 0.1f, 100.f, (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight(), glm::vec3(3,3,0), glm::vec3(0.f, 0.3f, 0.f));
+		*(gameState->Camera) = Camera(60.f, 0.1f, 100.f, (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight(), glm::vec3(0,0,3), glm::vec3(0.f, 0.0f, 0.f));
 	}
 
 	Console = gameState->Console;
