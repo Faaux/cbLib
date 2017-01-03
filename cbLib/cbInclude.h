@@ -28,7 +28,7 @@
 #define Assert(Expression) if(!(Expression)) {__builtin_trap();}
 #endif
 #else
-#define Assert(Expression) Expression
+#define Assert(Expression)
 #endif
 
 // IN BYTES

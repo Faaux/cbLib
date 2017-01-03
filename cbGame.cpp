@@ -377,7 +377,8 @@ cbInternal void EvaluateDebugInfo(GameInput* input)
 				int fileNameLength = 0;
 				while (*cursor != '|')
 				{
-					Assert(fileNameLength++ < ArrayCount(fileName));
+					Assert(fileNameLength < ArrayCount(fileName));
+					fileNameLength++;
 					*fileNameP++ = *cursor++;
 				}
 				*fileNameP = 0;
@@ -388,7 +389,8 @@ cbInternal void EvaluateDebugInfo(GameInput* input)
 				int lineLength = 0;
 				while (*cursor != '|')
 				{
-					Assert(lineLength++ < ArrayCount(line));
+					Assert(lineLength < ArrayCount(line));
+					lineLength++;
 					*lineP++ = *cursor++;
 				}
 				*lineP = 0;
