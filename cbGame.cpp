@@ -247,20 +247,16 @@ cbInternal cbSwap(SwapEventResult)
 	*(event_result *)rhs = tmp;
 }
 
-cbInternal void EvaluateDebugInfo()
+cbInternal void EvaluateDebugInfo(GameInput* input)
 {
 	TIMED_FUNCTION();
 
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
 	static float winAlpha = .7f;
-	if (!ImGui::Begin("Information", 0, ImVec2(340, ImGui::GetIO().DisplaySize.y - 20), winAlpha, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
-	{
-		ImGui::End();
-		return;
-	}
+
 	float frameTime = 1000.0f / ImGui::GetIO().Framerate;
 
-	// Framerate Graph
+	// Framerate Data
 	const int recordHistory = 200;
 	static int currentHistory = 0;
 	static float* fpsHistory = (float *)malloc(recordHistory * sizeof(float));
@@ -275,157 +271,169 @@ cbInternal void EvaluateDebugInfo()
 		frameTimeBuffer = 0.f;
 	}
 
-	ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, 0, FLT_MAX, FLT_MAX, ImVec2(0, 80));
-	ImGui::SameLine();
-	ImGui::Text("%s\n%-3.4f\n\n%s\n%-3.4f", "ms/frame", frameTime, "fps", ImGui::GetIO().Framerate);
 
-	ImGui::Spacing();
-	ImGui::SliderFloat("Transparency", &winAlpha, 0.0f, 1.0f);
-	if (GlobalDebugTable->CurrentIndex == GlobalDebugTable->NextIndex)
+	static bool isVisible = false;
+	if (!input->OldKeyboardInput.Keys[cbKey_F11].IsDown && input->NewKeyboardInput.Keys[cbKey_F11].IsDown)
 	{
-		ImGui::End();
-		return;
+		isVisible = !isVisible;
 	}
-	ImGui::Spacing();
-
-	// Profiling	
-	static bool didOnce = false;
-	if (!didOnce)
+	if (isVisible)
 	{
-		didOnce = true;
-		ImGui::SetNextTreeNodeOpen(true);
-	}
-	if (ImGui::CollapsingHeader("Profiling"))
-	{
-		uint64 cycles;
-		uint32 size;
-		event_result *eventList = ExtractLastFrameInformation(cycles, size);
-
-		static int e = 0;
-		ImGui::RadioButton("Sort by %", &e, 0); ImGui::SameLine();
-		ImGui::RadioButton("Sort by Order", &e, 1);
-
-		static bool showFilename = false;
-		static bool showMsEstimate = true;
-		ImGui::Checkbox("Show ms", &showMsEstimate); ImGui::SameLine();
-		ImGui::Checkbox("Show Filename", &showFilename);
-
-		if (e == 0)
+		if(!ImGui::Begin("Information", 0, ImVec2(340, ImGui::GetIO().DisplaySize.y - 20), winAlpha, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
 		{
-			// Resort by %
-			cbQuicksort(eventList, size, sizeof(event_result), CompareByClock, SwapEventResult);
-		}
-
-
-
-
-		float perc_w = showMsEstimate ? 130.f : 90.0f;
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-		ImGui::BeginChild("p_Perc", ImVec2(perc_w, 0), true, ImGuiWindowFlags_NoScrollbar);
-		{
-			ImGui::Text("Percentage %%");
-			if (showMsEstimate)
-			{
-				ImGui::SameLine();
-				ImGui::Text(" | ms");
-			}
-			ImGui::Separator();
-		}
-		ImGui::EndChild();
+			ImGui::End();
+			return;
+		}		
+		// Framerate Graph
+		ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, 0, FLT_MAX, FLT_MAX, ImVec2(0, 80));
 		ImGui::SameLine();
-		ImGui::InvisibleButton("vsplitter_1", ImVec2(8.0f, 0));
+		ImGui::Text("%s\n%-3.4f\n\n%s\n%-3.4f", "ms/frame", frameTime, "fps", ImGui::GetIO().Framerate);
 
-		ImGui::SameLine();
-		ImGui::BeginChild("p_Name", ImVec2(0, 0), true, showFilename ? ImGuiWindowFlags_AlwaysHorizontalScrollbar : 0);
+		ImGui::Spacing();
+		ImGui::SliderFloat("Transparency", &winAlpha, 0.0f, 1.0f);
+		if (GlobalDebugTable->CurrentIndex == GlobalDebugTable->NextIndex)
 		{
-			ImGui::Text("Name");
-			ImGui::Separator();
+			ImGui::End();
+			return;
 		}
-		ImGui::EndChild();
-
-		ImGui::PopStyleVar();
-
-		ImGui::BeginChild("p_Perc");
 		ImGui::Spacing();
-		ImGui::EndChild();
 
-		// #2 Column
-		ImGui::BeginChild("p_Name");
-		ImGui::Spacing();
-		ImGui::EndChild();
-
-		for (uint32 index = 0; index < size; index++)
+		// Profiling	
+		static bool didOnce = false;
+		if (!didOnce)
 		{
-			event_result *curResult = &eventList[index];
+			didOnce = true;
+			ImGui::SetNextTreeNodeOpen(true);
+		}
+		if (ImGui::CollapsingHeader("Profiling"))
+		{
+			uint64 cycles;
+			uint32 size;
+			event_result *eventList = ExtractLastFrameInformation(cycles, size);
 
-			float percentage = curResult->ElapsedCylces / (float)cycles * 100;
+			static int e = 0;
+			ImGui::RadioButton("Sort by %", &e, 0); ImGui::SameLine();
+			ImGui::RadioButton("Sort by Order", &e, 1);
 
-			char* cursor = cbGetLastPosOf('\\', curResult->GUID) + 1;
+			static bool showFilename = false;
+			static bool showMsEstimate = true;
+			ImGui::Checkbox("Show ms", &showMsEstimate); ImGui::SameLine();
+			ImGui::Checkbox("Show Filename", &showFilename);
 
-			char fileName[20] = {};
-			char *fileNameP = fileName;
-			int fileNameLength = 0;
-			while (*cursor != '|')
+			if (e == 0)
 			{
-				Assert(fileNameLength++ < ArrayCount(fileName));
-				*fileNameP++ = *cursor++;
+				// Resort by %
+				cbQuicksort(eventList, size, sizeof(event_result), CompareByClock, SwapEventResult);
 			}
-			*fileNameP = 0;
-			cursor++;
 
-			char line[7] = {};
-			char *lineP = line;
-			int lineLength = 0;
-			while (*cursor != '|')
+
+
+
+			float perc_w = showMsEstimate ? 130.f : 90.0f;
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+			ImGui::BeginChild("p_Perc", ImVec2(perc_w, 0), true, ImGuiWindowFlags_NoScrollbar);
 			{
-				Assert(lineLength++ < ArrayCount(line));
-				*lineP++ = *cursor++;
+				ImGui::Text("Percentage %%");
+				if (showMsEstimate)
+				{
+					ImGui::SameLine();
+					ImGui::Text(" | ms");
+				}
+				ImGui::Separator();
 			}
-			*lineP = 0;
-			cursor++;
+			ImGui::EndChild();
+			ImGui::SameLine();
+			ImGui::InvisibleButton("vsplitter_1", ImVec2(8.0f, 0));
 
-			// Skip Cursor Pos
-			while (*cursor++ != '|') {}
+			ImGui::SameLine();
+			ImGui::BeginChild("p_Name", ImVec2(0, 0), true, showFilename ? ImGuiWindowFlags_AlwaysHorizontalScrollbar : 0);
+			{
+				ImGui::Text("Name");
+				ImGui::Separator();
+			}
+			ImGui::EndChild();
 
-			// #1 Column
+			ImGui::PopStyleVar();
+
 			ImGui::BeginChild("p_Perc");
-			ImGui::Text("%-2.3f%%", percentage);
-			if (showMsEstimate)
-			{
-				ImGui::SameLine(60);
-				ImGui::Text("|");
-				ImGui::SameLine(70);
-				ImGui::Text("%-2.3f", percentage / 100.f * frameTime);
-
-			}
+			ImGui::Spacing();
 			ImGui::EndChild();
 
 			// #2 Column
 			ImGui::BeginChild("p_Name");
-			ImGui::Text("%s", cursor);
-			if (showFilename)
-			{
-				ImGui::SameLine(165);
-				ImGui::Text(" | %s [%s]", fileName, line);
-			}
+			ImGui::Spacing();
 			ImGui::EndChild();
 
+			for (uint32 index = 0; index < size; index++)
+			{
+				event_result *curResult = &eventList[index];
+
+				float percentage = curResult->ElapsedCylces / (float)cycles * 100;
+
+				char* cursor = cbGetLastPosOf('\\', curResult->GUID) + 1;
+
+				char fileName[20] = {};
+				char *fileNameP = fileName;
+				int fileNameLength = 0;
+				while (*cursor != '|')
+				{
+					Assert(fileNameLength++ < ArrayCount(fileName));
+					*fileNameP++ = *cursor++;
+				}
+				*fileNameP = 0;
+				cursor++;
+
+				char line[7] = {};
+				char *lineP = line;
+				int lineLength = 0;
+				while (*cursor != '|')
+				{
+					Assert(lineLength++ < ArrayCount(line));
+					*lineP++ = *cursor++;
+				}
+				*lineP = 0;
+				cursor++;
+
+				// Skip Cursor Pos
+				while (*cursor++ != '|') {}
+
+				// #1 Column
+				ImGui::BeginChild("p_Perc");
+				ImGui::Text("%-2.3f%%", percentage);
+				if (showMsEstimate)
+				{
+					ImGui::SameLine(60);
+					ImGui::Text("|");
+					ImGui::SameLine(70);
+					ImGui::Text("%-2.3f", percentage / 100.f * frameTime);
+
+				}
+				ImGui::EndChild();
+
+				// #2 Column
+				ImGui::BeginChild("p_Name");
+				ImGui::Text("%s", cursor);
+				if (showFilename)
+				{
+					ImGui::SameLine(165);
+					ImGui::Text(" | %s [%s]", fileName, line);
+				}
+				ImGui::EndChild();
 
 
+
+			}
+			ImGui::Columns(1);
+
+			ImGui::BeginChild("p_Name");
+			float scroll = ImGui::GetScrollY();
+			ImGui::EndChild();
+			ImGui::BeginChild("p_Perc");
+			ImGui::SetScrollY(scroll);
+			ImGui::EndChild();
 		}
-		ImGui::Columns(1);
-
-		ImGui::BeginChild("p_Name");
-		float scroll = ImGui::GetScrollY();
-		ImGui::EndChild();
-		ImGui::BeginChild("p_Perc");
-		ImGui::SetScrollY(scroll);
-		ImGui::EndChild();
+		ImGui::End();
 	}
-	ImGui::End();
-
-
-
 }
 
 EXPORT GAME_LOOP(GameLoop)
@@ -446,11 +454,11 @@ EXPORT GAME_LOOP(GameLoop)
 
 		gameState->Console = PushStruct(&gameState->Arena, cbConsole);
 		gameState->Camera = PushStruct(&gameState->Arena, Camera);
-		*(gameState->Camera) = Camera(60.f, 0.1f, 100.f, (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight(), glm::vec3(0,0,3), glm::vec3(0.f, 0.0f, 0.f));
+		*(gameState->Camera) = Camera(60.f, 0.1f, 100.f, (float)Platform.GetWindowWidth() / (float)Platform.GetWindowHeight(), glm::vec3(2, 2, 2), glm::vec3(0.f, 0.0f, 0.f));
 	}
 
 	Console = gameState->Console;
-	
+
 
 
 	TransStorage = (TransientStorage *)gameMemory->TransientStorage;
@@ -491,16 +499,16 @@ EXPORT GAME_LOOP(GameLoop)
 
 	// Start Imgui Frame
 	ImGui::NewFrame();
-	
+
 	Update(deltaTime, gameState, input);
-		
+
 	//ImGui::ShowTestWindow();
 	AddImguiConsole(gameState->Console);
 
 	RenderCommandGroup renderCommands = RenderCommandStruct(TransStorage->RenderGroupArena.Size, TransStorage->RenderGroupArena.Base, Platform.GetWindowWidth(), Platform.GetWindowHeight());
 	Render(deltaTime, gameState, &renderCommands);
 
-	EvaluateDebugInfo();
+	EvaluateDebugInfo(input);
 
 	// End Imgui Frame
 	BEGIN_BLOCK("Imgui Render");

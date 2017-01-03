@@ -32,8 +32,13 @@ void Camera::Update(float deltaTime, GameInput* input)
 			isVisible = !isVisible;
 		}
 
-		if (isVisible && ImGui::Begin("Mouse Settings"))
+		if (isVisible)
 		{
+			if(!ImGui::Begin("Mouse Settings"))
+			{
+				ImGui::End();
+				return;
+			}
 			ImGui::DragFloat("Camera Sensitivity", &rotationSpeed, 0.01f, 0.01f);
 			ImGui::DragFloat("Movement Speed", &speed, 0.02f, 0.01f);
 
