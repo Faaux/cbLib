@@ -4,6 +4,7 @@
 #include "cbGame.h"
 #include "imgui.h"
 #include <vector>
+#include "cbKeys.h"
 
 void AddLog(cbConsole* console, const char* fmt, ...)
 {
@@ -70,8 +71,12 @@ cbInternal void ExecCommand(cbConsole *console, const char* command)
 	AddLog(console, "[error] Unknown command: '%s'\n", command);
 }
 
-void AddImguiConsole(cbConsole *console)
+void AddImguiConsole(GameInput *input, cbConsole *console)
 {
+	if (SINGLE_PRESS(input, cbKey_F2))
+	{
+		console->IsVisible = !console->IsVisible;
+	}
 	if (!console->IsVisible)
 		return;
 	ImGui::SetNextWindowSize(ImVec2(520, 600), ImGuiSetCond_FirstUseEver);

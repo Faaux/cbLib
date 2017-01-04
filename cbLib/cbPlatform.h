@@ -119,10 +119,11 @@ struct GameInput
 	bool ShiftDown;
 	bool AltDown;
 	bool ControlDown;
+	bool IsEnabled;
 };
 
-#define PRESSED(input, key) input->OldKeyboardInput.Keys[key].IsDown && input->NewKeyboardInput.Keys[key].IsDown
-#define SINGLE_PRESS(input, key) !input->OldKeyboardInput.Keys[key].IsDown && input->NewKeyboardInput.Keys[key].IsDown
+#define PRESSED(input, key) input->IsEnabled && input->NewKeyboardInput.Keys[key].IsDown
+#define SINGLE_PRESS(input, key) input->IsEnabled && !input->OldKeyboardInput.Keys[key].IsDown && input->NewKeyboardInput.Keys[key].IsDown
 
 #define GAME_LOOP(name) void name(float deltaTime, GameMemory* gameMemory, GameInput* input)
 typedef GAME_LOOP(game_loop);

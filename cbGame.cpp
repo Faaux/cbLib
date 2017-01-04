@@ -508,20 +508,19 @@ EXPORT GAME_LOOP(GameLoop)
 
 		TransStorage->IsInitialized = true;
 	}
-	if (!input->OldKeyboardInput.Keys[cbKey_OEM_5].IsDown && input->NewKeyboardInput.Keys[cbKey_OEM_5].IsDown)
-	{
-		gameState->Console->IsVisible = !gameState->Console->IsVisible;
-	}
-	UpdateImgui(deltaTime, input);
-
+	
 	// Start Imgui Frame
+	UpdateImgui(deltaTime, input);
 	ImGui::NewFrame();
 
+	// Debug UIs
+	AddImguiConsole(input, gameState->Console);
+	AddImguiTweakers(input);
+
+	// Game Update
 	Update(deltaTime, gameState, input);
 
-	//ImGui::ShowTestWindow();
-	AddImguiConsole(gameState->Console);
-
+	// Game Render
 	RenderCommandGroup renderCommands = RenderCommandStruct(TransStorage->RenderGroupArena.Size, TransStorage->RenderGroupArena.Base, Platform.GetWindowWidth(), Platform.GetWindowHeight());
 	Render(deltaTime, gameState, &renderCommands);
 

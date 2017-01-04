@@ -7,6 +7,8 @@
 #include <GL/glew.h>
 
 
+std::vector<Tweaker> Tweakers;
+
 static cbShaderProgram *imguiShader;
 static unsigned int g_VboHandle = 0, g_VaoHandle = 0, g_ElementsHandle = 0, g_TextureId = 0;
 
@@ -185,6 +187,75 @@ void InitImGui()
 	glBindTexture(GL_TEXTURE_2D, last_texture);
 	glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
 	glBindVertexArray(last_vertex_array);
+}
+
+void AddImguiTweakers(GameInput *input)
+{
+	static bool isVisible = false;
+
+	if(SINGLE_PRESS(input, cbKey_F1))
+		isVisible = !isVisible;
+	
+	if (!isVisible)
+		return;
+
+	ImGui::SetNextWindowSize(ImVec2(700, 300), ImGuiSetCond_Always);
+	ImGui::SetNextWindowPosCenter();
+	if (!ImGui::Begin("  Tweaker", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse))
+	{
+		Assert(false);
+		ImGui::End();
+		return;
+	}
+
+	input->IsEnabled = false;
+	
+
+	static float speed = 0.1f;
+	ImGui::DragFloat("Tweaker Speed", &speed, 0.1f);
+	ImGui::Spacing();
+	ImGui::Spacing();
+
+	static ImGuiTextFilter filter;
+	filter.Draw("Filter (\"incl,-excl\")", 180);	
+	ImGui::Spacing();
+
+	for(auto it = Tweakers.begin(); it != Tweakers.end(); ++it)
+	{
+		if (!filter.PassFilter((*it).Name))
+			continue;
+
+		switch((*it).Type)
+		{
+		case R1: 
+			ImGui::DragFloat((*it).Name, (float *)(*it).Ptr, speed);
+			break;
+		case R2:
+			ImGui::DragFloat2((*it).Name, (float *)(*it).Ptr, speed);
+			break;
+		case R3:
+			ImGui::DragFloat3((*it).Name, (float *)(*it).Ptr, speed);
+			break;
+		case R4:
+			ImGui::DragFloat4((*it).Name, (float *)(*it).Ptr, speed);
+			break;
+		case S1:
+			ImGui::DragInt((*it).Name, (int *)(*it).Ptr, speed);
+			break;
+		case S2:
+			ImGui::DragInt2((*it).Name, (int *)(*it).Ptr, speed);
+			break;
+		case S3:
+			ImGui::DragInt3((*it).Name, (int *)(*it).Ptr, speed);
+			break;
+		case S4:
+			ImGui::DragInt4((*it).Name, (int *)(*it).Ptr, speed);
+			break;
+		default: ;
+		}
+	}
+
+	ImGui::End();
 }
 
 void UpdateImgui(float deltaTime, GameInput *input)

@@ -236,6 +236,7 @@ cbInternal void Win32InitWindowAndOpenGL()
 cbInternal float Win32UpdatePlatform(GameInput *input)
 {
 	TIMED_FUNCTION();
+	input->IsEnabled = true;
 	input->OldMouseInputState = input->NewMouseInputState;
 	input->OldKeyboardInput = input->NewKeyboardInput;
 	input->NewKeyboardInput.CurrentLength = 0;

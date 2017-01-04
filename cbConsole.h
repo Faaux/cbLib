@@ -1,6 +1,7 @@
 #pragma once
 #define CONSOLE_SIZE 64
 #define CONSOLE_LENGTH 1024
+#include "cbPlatform.h"
 
 struct cbConsole
 {
@@ -20,4 +21,4 @@ struct cbConsoleCommand
 };
 
 void AddLog(cbConsole* console, const char* fmt, ...);
-void AddImguiConsole(cbConsole *console);
+void AddImguiConsole(GameInput* input, cbConsole *console);

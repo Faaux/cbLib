@@ -3,6 +3,7 @@
 #include "cbGame.h"
 #include "imgui.h"
 #include "cbKeys.h"
+#include "cbImgui.h"
 
 Camera::Camera(float fov, float near, float far, float aspectRatio, glm::vec3 pos, glm::vec3 lookAt) : _fov(fov), _near(near), _far(far), _position(pos), _isTransitioning(false)
 {
@@ -12,7 +13,7 @@ Camera::Camera(float fov, float near, float far, float aspectRatio, glm::vec3 po
 		_near,
 		_far
 	);
-	
+
 	_forward = glm::normalize(lookAt - pos);
 	_currentRot = glm::rotation(VEC_Z, -_forward);
 
@@ -25,27 +26,9 @@ void Camera::Update(float deltaTime, GameInput* input)
 	static float speed = 2.f;
 
 	// Imgui Debug Interface
-	{
-		static bool isVisible = false;
-		if (!input->OldKeyboardInput.Keys[cbKey_F1].IsDown && input->NewKeyboardInput.Keys[cbKey_F1].IsDown)
-		{
-			isVisible = !isVisible;
-		}
-
-		if (isVisible)
-		{
-			if(!ImGui::Begin("Mouse Settings"))
-			{
-				ImGui::End();
-				return;
-			}
-			ImGui::DragFloat("Camera Sensitivity", &rotationSpeed, 0.01f, 0.01f);
-			ImGui::DragFloat("Movement Speed", &speed, 0.02f, 0.01f);
-
-			ImGui::DragFloat3("Cam Pos", &_position.x);
-			ImGui::End();
-		}
-	}
+	TWEAKER(R1, "Camera Sensitivity", &rotationSpeed);
+	TWEAKER(R1, "Movement Speed", &speed);
+	TWEAKER(R3, "Cam Position", &_position.x);
 
 	static bool wasTransitioning = false;
 	if (!_isTransitioning)
@@ -67,27 +50,27 @@ void Camera::Update(float deltaTime, GameInput* input)
 		}
 
 		glm::vec3 dir(0);
-		if (input->NewKeyboardInput.Keys[cbKey_W].IsDown)
+		if (PRESSED(input, cbKey_W))
 		{
 			dir += _forward;
 		}
-		if (input->NewKeyboardInput.Keys[cbKey_S].IsDown)
+		if (PRESSED(input, cbKey_S))
 		{
 			dir -= _forward;
 		}
-		if (input->NewKeyboardInput.Keys[cbKey_D].IsDown)
+		if (PRESSED(input, cbKey_D))
 		{
 			dir += _right;
 		}
-		if (input->NewKeyboardInput.Keys[cbKey_A].IsDown)
+		if (PRESSED(input, cbKey_A))
 		{
 			dir -= _right;
 		}
-		if (input->NewKeyboardInput.Keys[cbKey_SPACEBAR].IsDown)
+		if (PRESSED(input, cbKey_SPACEBAR))
 		{
 			dir += glm::vec3(0, 1, 0);
 		}
-		if (input->NewKeyboardInput.Keys[cbKey_SHIFT].IsDown)
+		if (PRESSED(input, cbKey_SHIFT))
 		{
 			dir -= glm::vec3(0, 1, 0);;
 		}
@@ -103,14 +86,14 @@ void Camera::Update(float deltaTime, GameInput* input)
 		accum += deltaTime;
 		float lerp = accum / _transitionDelta;
 
-		if(!wasTransitioning)
+		if (!wasTransitioning)
 		{
 			initalQuat = _currentRot;
 			initalPos = _position;
 		}
 
 
-		if(accum <= _transitionDelta)
+		if (accum <= _transitionDelta)
 		{
 			_position = glm::lerp(initalPos, _targetPos, lerp);
 			_currentRot = glm::lerp(initalQuat, _targetRot, lerp);
