@@ -552,11 +552,11 @@ int main()
 
 	// Allocate all the memory we ever need
 
-	const mem_size permSize = Megabytes(64);
+	const mem_size permSize = Megabytes(4);
 	void *permanentMem = VirtualAlloc(0, permSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	Assert(permanentMem);
 
-	const mem_size transSize = Megabytes(256);
+	const mem_size transSize = Megabytes(128);
 	void *transientMem = VirtualAlloc(0, transSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
 	Assert(transientMem);
 

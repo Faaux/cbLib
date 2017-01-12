@@ -4,6 +4,7 @@
 #include "cbMemory.h"
 #include "cbConsole.h"
 #include "cbCamera.h"
+#include "cbStack.h"
 
 
 struct GameState
@@ -21,6 +22,7 @@ struct TransientStorage
 	cbArena RenderGroupArena;
 	cbArena ShaderArena;
 	cbArena ModelArena;
+	cbStack TempStack;
 };
 
 

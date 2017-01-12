@@ -3,6 +3,7 @@
 #include "cbGame.h"
 #include "cbBasic.h"
 #include "cbMemory.h"
+#include "cbStack.h"
 #include <GL/glew.h>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
@@ -65,8 +66,8 @@ inline void cbDeleteMesh(cbMesh *mesh)
 	glDeleteBuffers(1, &mesh->VBO);
 }
 
-#define StartRecursiveMeshLoad(scene,rootNode,model) {uint32 recurseiveMeshIndex = 0; RecursiveMeshLoad_(scene,rootNode,model,recurseiveMeshIndex);}
-inline void RecursiveMeshLoad_(const aiScene *scene, aiNode *rootNode, cbModel *model, uint32 &meshIndex)
+#define StartRecursiveMeshLoad(stack, scene,rootNode,model) {uint32 recurseiveMeshIndex = 0; RecursiveMeshLoad_(stack, scene,rootNode,model,recurseiveMeshIndex);}
+inline void RecursiveMeshLoad_(cbStack* stack, const aiScene *scene, aiNode *rootNode, cbModel *model, uint32 &meshIndex)
 {
 	TIMED_FUNCTION();
 	for (uint32 n = 0; n < rootNode->mNumMeshes; ++n)
@@ -80,7 +81,7 @@ inline void RecursiveMeshLoad_(const aiScene *scene, aiNode *rootNode, cbModel *
 		// 3 Pos, 3 Normal, 2 UV
 		uint32 numVerts = aiMesh->mNumVertices;
 		mem_size meshSize = sizeof(float) * (3 + 3 + 2) * numVerts;
-		float *meshDataOrigin = (float *)malloc(meshSize);
+		float *meshDataOrigin = (float *)PushStackElem(stack, meshSize);
 		float *meshData = meshDataOrigin;
 
 		for(uint32 i = 0; i < aiMesh->mNumVertices; ++i)
@@ -124,7 +125,7 @@ inline void RecursiveMeshLoad_(const aiScene *scene, aiNode *rootNode, cbModel *
 
 		// Get Indices Data
 		uint32 numIndices = aiMesh->mNumFaces * 3;
-		uint32 *indexDataOrigin = (uint32 *)malloc(numIndices * sizeof(uint32));
+		uint32 *indexDataOrigin = (uint32 *)PushStackElem(stack, numIndices * sizeof(uint32));
 		uint32 *indexData = indexDataOrigin;
 		for (uint32 j = 0; j < aiMesh->mNumFaces; ++j)
 		{
@@ -141,21 +142,21 @@ inline void RecursiveMeshLoad_(const aiScene *scene, aiNode *rootNode, cbModel *
 		
 		cbUploadMesh(mesh, meshDataOrigin, meshSize, indexDataOrigin);
 		
-		free(meshDataOrigin);
-		free(indexDataOrigin);
+		FreeStackElem(stack, meshDataOrigin);
+		FreeStackElem(stack, indexDataOrigin);
 	}
 
 	for (uint32 n = 0; n < rootNode->mNumChildren; ++n)
 	{
-		RecursiveMeshLoad_(scene, rootNode->mChildren[n], model, meshIndex);
+		RecursiveMeshLoad_(stack, scene, rootNode->mChildren[n], model, meshIndex);
 	}
 }
 
-#define cbLoadModel(file) cbLoadModel_(&TransStorage->ModelArena, file)
-inline cbModel *cbLoadModel_(cbArena *memory, char* fileName)
+#define cbLoadModel(file) cbLoadModel_(&TransStorage->TempStack, &TransStorage->ModelArena, file)
+inline cbModel *cbLoadModel_(cbStack *tempStack, cbArena *modelArena, char* fileName)
 {
 	TIMED_FUNCTION();
-	cbModelTable *table = (cbModelTable*)memory->Base;
+	cbModelTable *table = (cbModelTable*)modelArena->Base;
 	for (uint32 i = 0; i < table->UsedModels; ++i)
 	{
 		if(cbStrCmp(fileName,table->ModelNames[i])==0)
@@ -165,7 +166,7 @@ inline cbModel *cbLoadModel_(cbArena *memory, char* fileName)
 	}
 
 	Assert(table->UsedModels < MAX_MODELS);
-	cbModel *model = PushStruct(memory, cbModel);
+	cbModel *model = PushStruct(modelArena, cbModel);
 	table->ModelNames[table->UsedModels] = fileName;
 	table->Models[table->UsedModels] = model;
 	table->UsedModels++;
@@ -177,9 +178,9 @@ inline cbModel *cbLoadModel_(cbArena *memory, char* fileName)
 	Assert(scene);
 
 	model->meshCount = scene->mNumMeshes;
-	model->meshes = PushArray(memory, model->meshCount, cbMesh);
+	model->meshes = PushArray(modelArena, model->meshCount, cbMesh);
 
-	StartRecursiveMeshLoad(scene, scene->mRootNode, model);
+	StartRecursiveMeshLoad(tempStack, scene, scene->mRootNode, model);
 
 	aiReleaseImport(scene);
 	aiDetachAllLogStreams();

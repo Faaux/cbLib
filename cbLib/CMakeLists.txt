@@ -2,12 +2,14 @@ cmake_minimum_required (VERSION 2.8)
 project (cbLib)
  
 set (SOURCE_FILES 	cbPlatform.cpp)
+
 set (HEADER_FILES	cbBasic.h
 					cbDebug.h
 					cbInclude.h
 					cbKeys.h
 					cbMemory.h
-					cbPlatform.h)
+					cbPlatform.h
+					cbStack.h)
 
 # add the executable
 add_executable(cbLib ${SOURCE_FILES} ${HEADER_FILES})

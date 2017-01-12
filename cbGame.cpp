@@ -294,11 +294,11 @@ cbInternal void EvaluateDebugInfo(GameInput* input)
 	}
 	if (isVisible)
 	{
-		if(!ImGui::Begin("Information", 0, ImVec2(340, ImGui::GetIO().DisplaySize.y - 20), winAlpha, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
+		if (!ImGui::Begin("Information", 0, ImVec2(340, ImGui::GetIO().DisplaySize.y - 20), winAlpha, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings))
 		{
 			ImGui::End();
 			return;
-		}		
+		}
 		// Framerate Graph
 		ImGui::PlotLines("##MsPlot", fpsHistory, recordHistory, currentHistory, 0, FLT_MAX, FLT_MAX, ImVec2(0, 80));
 		ImGui::SameLine();
@@ -482,33 +482,47 @@ EXPORT GAME_LOOP(GameLoop)
 	if (gameMemory->DLLHotSwapped)
 	{
 		uint8* currentMemoryLocation = (uint8 *)gameMemory->TransientStorage + sizeof(TransientStorage);
+		{
+			cbArena transRenderArena;
+			mem_size renderCommandSize = Kilobytes(256);
+			InitArena(&transRenderArena, renderCommandSize, currentMemoryLocation);
+			TransStorage->RenderGroupArena = transRenderArena;
+			PushSize(&TransStorage->RenderGroupArena, renderCommandSize);
+			currentMemoryLocation += renderCommandSize;
+		}
 
-		cbArena transRenderArena;
-		mem_size renderCommandSize = Megabytes(1);
-		InitArena(&transRenderArena, renderCommandSize, currentMemoryLocation);
-		TransStorage->RenderGroupArena = transRenderArena;
-		PushSize(&TransStorage->RenderGroupArena, renderCommandSize);
+		{
+			cbArena shaderArena;
+			mem_size shaderArenaSize = Kilobytes(256);
+			InitArena(&shaderArena, shaderArenaSize, currentMemoryLocation);
+			TransStorage->ShaderArena = shaderArena;
+			currentMemoryLocation += shaderArenaSize;
+		}
 
-		currentMemoryLocation += renderCommandSize;
+		{
+			cbArena modelArena;
+			mem_size modelArenaSize = Kilobytes(256);
+			InitArena(&modelArena, modelArenaSize, currentMemoryLocation);
+			TransStorage->ModelArena = modelArena;
+			cbInitModelTable(&TransStorage->ModelArena);
+			currentMemoryLocation += modelArenaSize;
+		}
 
-		cbArena shaderArena;
-		mem_size shaderArenaSize = Kilobytes(256);
-		InitArena(&shaderArena, shaderArenaSize, currentMemoryLocation);
-		TransStorage->ShaderArena = shaderArena;
-		currentMemoryLocation += shaderArenaSize;
-
-		cbArena modelArena;
-		mem_size modelArenaSize = Kilobytes(256);
-		InitArena(&modelArena, modelArenaSize, currentMemoryLocation);
-		TransStorage->ModelArena = modelArena;
-		cbInitModelTable(&TransStorage->ModelArena);
-		currentMemoryLocation += modelArenaSize;
-
+		{
+			mem_size tempArenaSize = Megabytes(10);
+			TransStorage->TempStack = CreateStack(currentMemoryLocation, tempArenaSize);
+			currentMemoryLocation += tempArenaSize;
+		}
 		InitImGui();
+
+		Assert(currentMemoryLocation < (uint8 *)gameMemory->TransientStorage + gameMemory->TransientStorageSize);
 
 		TransStorage->IsInitialized = true;
 	}
-	
+
+	// Reset Temp Stack Each Frame
+	TransStorage->TempStack.SizeLeft = TransStorage->TempStack.Size;
+
 	// Start Imgui Frame
 	UpdateImgui(deltaTime, input);
 	ImGui::NewFrame();

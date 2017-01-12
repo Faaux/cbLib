@@ -10,12 +10,14 @@ struct cbArena
 
 #define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))
 #define ZeroArray(Count, Pointer) ZeroSize(Count*sizeof((Pointer)[0]), Pointer)
-inline void ZeroSize(mem_size size, void *ptr)
+#define ZeroSize(size, ptr) SetMemory(size, ptr, 0)
+
+inline void SetMemory(mem_size size, void *ptr, uint8 value)
 {
 	uint8 *byte = (uint8 *)ptr;
 	while (size--)
 	{
-		*byte++ = 0;
+		*byte++ = value;
 	}
 }
 
