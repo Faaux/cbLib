@@ -10,14 +10,52 @@ struct cbArena
 
 #define ZeroStruct(Instance) ZeroSize(sizeof(Instance), &(Instance))
 #define ZeroArray(Count, Pointer) ZeroSize(Count*sizeof((Pointer)[0]), Pointer)
-#define ZeroSize(size, ptr) SetMemory(size, ptr, 0)
+#define ZeroSize(size, ptr) SetMemory(size, ptr, (uint8)0)
+#define Fill16(value) ((uint16)(value << 8) + value)
+#define Fill32(value) (((uint32)Fill16(value) << 16) + (uint32)Fill16(value))
+#define Fill64(value) (((uint64)Fill32(value) << 32) + (uint64)Fill32(value))
+
+inline void SetMemory(mem_size size, void *ptr, uint64 value)
+{
+	Assert(size % sizeof(uint64) == 0);
+
+	uint64 *cur = (uint64 *)ptr;
+	while (size)
+	{
+		*cur++ = value;
+		size -= sizeof(uint64);
+	}
+}
+
+inline void SetMemory(mem_size size, void *ptr, uint32 value)
+{
+	Assert(size % sizeof(uint32) == 0);
+
+	uint32 *cur = (uint32 *)ptr;
+	while (size)
+	{
+		*cur++ = value;
+		size -= sizeof(uint32);
+	}
+}
 
 inline void SetMemory(mem_size size, void *ptr, uint8 value)
 {
-	uint8 *byte = (uint8 *)ptr;
-	while (size--)
+	if (size % sizeof(uint64) == 0)
 	{
-		*byte++ = value;
+		SetMemory(size, ptr, Fill64(value));
+	}
+	else if (size % sizeof(uint32) == 0)
+	{
+		SetMemory(size, ptr, Fill32(value));
+	}
+	else
+	{
+		uint8 *byte = (uint8 *)ptr;
+		while (size--)
+		{
+			*byte++ = value;
+		}
 	}
 }
 
@@ -61,7 +99,7 @@ inline mem_size GetAlignmentSize(cbArena* mem, uint32 alignment)
 	mem_size resultPointer = (mem_size)mem->Base + mem->Used;
 	mem_size alignmentMask = alignment - 1;
 
-	if(resultPointer & alignmentMask)
+	if (resultPointer & alignmentMask)
 	{
 		result = alignment - (resultPointer & alignmentMask);
 	}
@@ -81,7 +119,7 @@ inline void *PushSize_(cbArena *mem, mem_size size, ArenaPushParams params = Get
 
 	Assert(sizeWithAlignment >= size);
 
-	if(params.Flags & ZeroArenaMemory)
+	if (params.Flags & ZeroArenaMemory)
 	{
 		ZeroSize(size, result);
 	}

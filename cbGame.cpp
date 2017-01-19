@@ -522,6 +522,10 @@ EXPORT GAME_LOOP(GameLoop)
 
 	// Reset Temp Stack Each Frame
 	TransStorage->TempStack.SizeLeft = TransStorage->TempStack.Size;
+	{
+		TIMED_BLOCK("Clear TempStack");
+		SetMemory(TransStorage->TempStack.Size, TransStorage->TempStack.Base, (uint64)0xDEADBEEFDEADBEEF);
+	}
 
 	// Start Imgui Frame
 	UpdateImgui(deltaTime, input);
